@@ -243,7 +243,13 @@ def main() -> int:
         # 対象ROIが実際に現れるまで短時間だけ再確認し、空振りを入力しない。
         deadline = time.monotonic() + 8.0
         dynamic_point = None
-        probe_label = "出発ボーナス閉じる" if screen == "bonus" and label == "閉じる" else label
+        # 「閉じる」は画面ごとに別のROIテンプレートを持つ。論理上の
+        # ラベルは共通のまま、表示確認だけ画面固有の別名へ切り替える。
+        probe_label = label
+        if label == "閉じる" and screen == "bonus":
+            probe_label = "出発ボーナス閉じる"
+        elif label == "閉じる" and screen == "item_reward":
+            probe_label = "アイテム報酬閉じる"
         def dynamic_close_point() -> tuple[int, int] | None:
             if label != "閉じる" or screen not in {"boss_detail", "bonus", "item_reward"}:
                 return None
