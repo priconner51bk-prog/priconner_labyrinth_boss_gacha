@@ -111,6 +111,14 @@ class BossGachaWindow:
         except ValueError as exc:
             messagebox.showerror("入力エラー", str(exc))
             return
+        action = "再開" if resume else "開始"
+        if not messagebox.askyesno(
+            "ADB入力の確認",
+            f"BlueStacks にADB入力を送信してガチャを{action}します。\n\n"
+            "対象画面・ボス名・パスポート枚数を確認しましたか？",
+        ):
+            self.status.configure(text="キャンセルしました")
+            return
         environment = os.environ.copy()
         environment["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT), environment.get("PYTHONPATH", "")))
         self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,

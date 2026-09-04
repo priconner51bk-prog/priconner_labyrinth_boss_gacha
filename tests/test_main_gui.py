@@ -29,7 +29,7 @@ def test_gui_start_enables_stop_and_stop_kills_child_process():
         window = BossGachaWindow(root)
         window.area3.insert(0, "test-area3")
         window.area5.insert(0, "test-area5")
-        with patch("main.subprocess.Popen", FakeProcess):
+        with patch("main.subprocess.Popen", FakeProcess), patch("main.messagebox.askyesno", return_value=True):
             window.start()
             process = window.process
             assert str(window.stop_button["state"]) == "normal"
