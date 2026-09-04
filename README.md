@@ -129,6 +129,8 @@ python scripts/task_boss_gacha_live.py --serial 127.0.0.1:5555 --default-models
 
 画面 ID が取得でき、エラーや安全停止理由がないことを確認してから、[実機運用手順](docs/OPERATIONS.md) の実行手順へ進みます。
 
+画面テンプレートの画像は実機キャプチャから準備します。これらにはゲーム画面が含まれるため、`data/observations/live/` にローカル保存し、GitHub には commit しません。テンプレートが未配置の場合、preflight は `screen_templates_unavailable` で安全停止します。
+
 ## 追加で確認しておく項目
 
 公開・運用を安定させるには、次の情報も README または `docs/` に残すと便利です。

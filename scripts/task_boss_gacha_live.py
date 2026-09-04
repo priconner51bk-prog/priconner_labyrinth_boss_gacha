@@ -69,7 +69,16 @@ def main() -> int:
     live_dir = ROOT / "data" / "observations" / "live"
     trace = TimingTrace(live_dir / "boss_gacha_timing.jsonl", task="task_boss_gacha")
     capture = AdbScreenCapture(serial=args.serial, timing_trace=trace)
-    probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
+    try:
+        probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(json.dumps({
+            "status": "safety_stop",
+            "reason": "screen_templates_unavailable",
+            "error": str(exc),
+            "execute": args.execute,
+        }, ensure_ascii=False))
+        return 2
     def observe_screen_stable() -> str | None:
         # BlueStacks may return one empty frame during a transition. Keep the
         # retry window short, but long enough to avoid ending the whole gacha
@@ -92,6 +101,13 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": f"screen_observation_failed:{type(exc).__name__}", "error": screen_error_message(exc, args.serial), "execute": args.execute}, ensure_ascii=False))
         return 2
     print(json.dumps({"screen_id": screen_id, "execute": args.execute}, ensure_ascii=False))
+    if screen_id is None:
+        print(json.dumps({
+            "status": "safety_stop",
+            "reason": "screen_not_recognized",
+            "execute": args.execute,
+        }, ensure_ascii=False))
+        return 2
     if not args.execute:
         return 0
     resume_matches = args.resume_screen and (screen_id == args.resume_screen or (args.resume_screen == "bonus" and screen_id == "item_reward"))

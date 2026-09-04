@@ -170,7 +170,11 @@ def load_template_probe_config(path: str | Path, capture):
             result[name] = TemplateRegion(image, *[int(value[field]) for field in ("left", "top", "right", "bottom")])
         return result
 
-    return AdbTemplateScreenProbe(capture, screens=regions("screens"), targets=regions("targets"),
+    screen_regions = regions("screens")
+    target_regions = regions("targets")
+    missing = sorted({str(region.image) for region in (*screen_regions.values(), *target_regions.values()) if not region.image.is_file()})
+    if missing:
+        raise FileNotFoundError(f"画面テンプレートが未配置です: {missing[0]}")
+    return AdbTemplateScreenProbe(capture, screens=screen_regions, targets=target_regions,
                                   threshold=float(data.get("threshold", 0.82)))
-
 
