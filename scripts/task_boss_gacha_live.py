@@ -315,7 +315,19 @@ def main() -> int:
         frame_index["value"] += 1
         path = live_dir / f"task_boss_gacha_{side}_{frame_index['value']}.png"
         capture.capture(path)
-        lines = ocr.recognize(str(path), roi=roi)
+        # 実機のボス名ROIは高さが約72pxしかないため、そのままでは
+        # PP-OCRv4の検出器が文字列を落とすことがある。ROIだけを2倍に
+        # 拡大してOCRし、画面全体のノイズは読み込ませない。
+        import cv2
+        image = cv2.imread(str(path))
+        if image is None:
+            raise RuntimeError("ボス名画像を読み込めません")
+        cropped = roi.crop_array(image)
+        enlarged = cv2.resize(cropped, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        ocr_path = live_dir / f"task_boss_gacha_{side}_{frame_index['value']}_name_ocr.png"
+        if not cv2.imwrite(str(ocr_path), enlarged):
+            raise RuntimeError("ボス名OCR画像を保存できません")
+        lines = ocr.recognize(str(ocr_path))
         trace.record("ocr_boss_name", (time.perf_counter() - started) * 1000, side=side)
         text = re.sub(r"\s+", "", "".join(line.text for line in lines))
         for canonical, variants in names.items():
