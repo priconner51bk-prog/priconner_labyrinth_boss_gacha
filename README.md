@@ -174,6 +174,8 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 - 実機を操作しないテスト方法と、実機での最終確認手順
 - ライセンス、問い合わせ先、Issue で受け付けない内容
 
+未完了タスクと優先順位は [docs/TASKS.md](docs/TASKS.md) で管理します。
+
 ## セットアップとテスト
 
 リポジトリ直下で実行します。
