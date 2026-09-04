@@ -68,7 +68,7 @@ class BossGachaWindow:
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
         self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
-        self.passports = self._entry(form, "試行回数（1回1枚）", "100", 1)
+        self.passports = self._entry(form, "試行回数", "100", 1)
         ttk.Label(form, text="ギルド").grid(row=2, column=0, sticky="w", pady=3)
         self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
         self.guild.set("美食殿")
