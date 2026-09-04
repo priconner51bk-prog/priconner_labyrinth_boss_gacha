@@ -36,14 +36,14 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "プリンセスナイト サレンディア救護院": {
+    "サレンディア救護院": {
       "source_labels": ["6アヤネ"],
       "recommended_members": ["★6アヤネ"],
       "notes": "6アヤネを強く推奨。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "プリンセスナイト 王宮騎士団（NIGHTMARE）": {
+    "王宮騎士団（NIGHTMARE）": {
       "source_labels": ["αクリス"],
       "recommended_members": ["アルファクリスティーナ"],
       "notes": "αクリスが最強との記載。",
@@ -64,14 +64,14 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "悪魔偽王国軍（ディアボロス）": {
+    "ディアボロス": {
       "source_labels": ["ハロシノ"],
       "recommended_members": ["ハロウィンシノブ"],
       "notes": "ハロシノは未使用だが記載内容が強そうなので採用候補。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "動物苑 牧場（エリザベスパーク）": {
+    "牧場（エリザベスパーク）": {
       "source_labels": ["ケツバトラー", "6リン"],
       "recommended_members": [],
       "avoid_members": ["ケツバトラー", "★6リン"],
@@ -101,7 +101,7 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "動物苑 自警団（カォン）": {
+    "自警団（カォン）": {
       "source_labels": ["光染めの3人", "6マホ"],
       "recommended_members": [],
       "optional_members": ["★6マホ"],
@@ -126,4 +126,3 @@
     }
   }
 }
-

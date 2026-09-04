@@ -60,6 +60,8 @@ def test_gui_uses_japanese_resume_labels_and_default_guild():
         window = BossGachaWindow(root)
         assert window.guild.get() == "美食殿"
         assert "トゥインクルウィッシュ" in window.GUILDS
+        assert "サレンディア救護院" in window.GUILDS
+        assert "王宮騎士団（NIGHTMARE）" in window.GUILDS
         assert "リトルリリカル" in window.GUILDS
         assert len(window.GUILDS) == 14
         assert window.difficulty.get() == "10"

@@ -193,7 +193,7 @@ python scripts/debug_boss_gacha.py --observations path\to\observations.json
 
 引数なしで起動すると操作ウィンドウが開きます。ウィンドウの「開始」は確認ダイアログの後に ADB 入力を有効にした実機処理を開始し、「停止（即時）」は実行中のプロセスを直ちに終了します。停止・異常終了後は再開画面を選び、「再開」を押してください。
 
-入力する項目は ADB serial、今回の試行回数、ギルド、難易度、エリア 3/5 の許容ボスです。ギルドは `configs/labyrinth_guild_starting_members.json` に登録された全候補から選択でき、既定値は美食殿です。既定の試行回数は100回で、1試行につきパスポートを1枚消費します。OCRは評価済みのPP-OCRv4標準モデルに固定しています。開始前に BlueStacks の接続と対象画面を確認してください。
+入力する項目は ADB serial、今回の試行回数、ギルド、難易度、エリア 3/5 の許容ボスです。ギルドはゲーム内カード表記で `configs/labyrinth_guild_starting_members.json` に登録された全候補から選択でき、既定値は美食殿です。既定の試行回数は100回で、1試行につきパスポートを1枚消費します。OCRは評価済みのPP-OCRv4標準モデルに固定しています。開始前に BlueStacks の接続と対象画面を確認してください。
 
 ```powershell
 python main.py
