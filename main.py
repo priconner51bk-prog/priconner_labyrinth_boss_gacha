@@ -58,6 +58,7 @@ class BossGachaWindow:
         self.process: subprocess.Popen[str] | None = None
         self.output_queue: queue.Queue[str] = queue.Queue()
 
+        ttk.Label(root, text="対象ウィンドウ：BlueStacks（Android画面 1280x720）", padding=(12, 8)).pack(fill="x")
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
         self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
@@ -142,6 +143,7 @@ class BossGachaWindow:
         if not messagebox.askyesno(
             "ADB入力の確認",
             f"BlueStacks にADB入力を送信してガチャを{action}します。\n\n"
+            "対象ウィンドウ：BlueStacks（Android画面 1280x720）\n"
             f"ADB serial：{self.serial.get()}\n"
             f"ギルド：{self.guild.get()}\n"
             f"試行回数：最大{self.passports.get()}回\n"
