@@ -61,6 +61,8 @@ def test_gui_uses_japanese_resume_labels_and_default_guild():
         assert window.guild.get() == "美食殿"
         assert window.difficulty.get() == "10"
         assert window.passports.get() == "100"
+        assert window.AREA3_BOSSES == ("マダムエレクトラ", "フロストハウンド", "ダークガーゴイル", "グレーターゴーレム", "ベノムサラマンドラ")
+        assert window.AREA5_BOSSES == ("キマイラ", "ゴブリンロード", "ラースドラゴン", "アルティマガーディアン", "ジャバウォック")
         assert window.resume_screen["values"][1] == "ギルド選択画面"
         window.resume_screen.set("ボス一覧マップ")
         command = window._command(resume=True)

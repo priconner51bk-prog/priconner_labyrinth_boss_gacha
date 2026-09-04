@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parent
 def _config_names(filename: str) -> tuple[str, ...]:
     try:
         data = json.loads((ROOT / "configs" / filename).read_text(encoding="utf-8"))
-        return tuple(str(item["name"]) for item in data.get("bosses", []))
+        bosses = sorted(data.get("bosses", []), key=lambda item: int(item.get("order", 10**9)))
+        return tuple(str(item["name"]) for item in bosses)
     except (OSError, ValueError, KeyError, TypeError):
         return ()
 
