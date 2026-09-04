@@ -234,7 +234,7 @@ python -m pytest -q
 git diff --check
 ```
 
-コミットメッセージは変更内容が分かる短い命令形にし、実機操作を伴う変更では対象画面・安全停止条件・検証結果を本文に残します。レビュー前の確認項目は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) を参照してください。
+コミットメッセージは変更内容が分かる短い命令形にし、実機操作を伴う変更では対象画面・安全停止条件・検証結果を本文に残します。レビュー前の確認項目は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、GitHub 公開手順は [docs/PUBLISHING.md](docs/PUBLISHING.md) を参照してください。
 
 ### 公開前チェック
 
