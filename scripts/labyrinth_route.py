@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 import subprocess
 import random
+import re
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Mapping, Protocol
@@ -65,6 +66,45 @@ ADB_HEALTHCHECK_TIMEOUT_SECONDS = 3
 MAP_SWIPE_START = (1120, 360)
 MAP_SWIPE_END = (160, 360)
 MAP_SWIPE_DURATION_MS = 300
+BASE_SCREEN_SIZE = (1280, 720)
+
+
+class AdbCoordinateScaler:
+    """Convert design coordinates to the actual Android client resolution."""
+
+    def __init__(self, serial: str = ADB_SERIAL, adb_command: str = "adb") -> None:
+        self.serial = serial
+        self.adb_command = adb_command
+        self._size: tuple[int, int] | None = None
+
+    def screen_size(self) -> tuple[int, int]:
+        if self._size is not None:
+            return self._size
+        result = subprocess.run(
+            [self.adb_command, "-s", self.serial, "shell", "wm", "size"],
+            check=True, capture_output=True, text=True, timeout=ADB_HEALTHCHECK_TIMEOUT_SECONDS,
+        )
+        matches = re.findall(r"(\d+)x(\d+)", result.stdout)
+        if not matches:
+            raise RuntimeError(f"ADB画面サイズを取得できません: {self.serial}")
+        width, height = (int(value) for value in matches[-1])
+        if width <= 0 or height <= 0:
+            raise RuntimeError(f"ADB画面サイズが不正です: {width}x{height}")
+        base_width, base_height = BASE_SCREEN_SIZE
+        if width * base_height != height * base_width:
+            raise RuntimeError(
+                f"画面比率が基準と異なるため安全停止: {width}x{height} != {base_width}x{base_height}"
+            )
+        self._size = (width, height)
+        return self._size
+
+    def point(self, point: tuple[int, int]) -> tuple[int, int]:
+        width, height = self.screen_size()
+        base_width, base_height = BASE_SCREEN_SIZE
+        return (
+            round(point[0] * width / base_width),
+            round(point[1] * height / base_height),
+        )
 
 
 def debug_jitter_coordinate(
@@ -191,6 +231,7 @@ def run_adb_coordinate_sequence(
     require_screen_change: bool = False,
     timing_trace=None,
     previous_screen_token: str | None = None,
+    coordinate_scaler: AdbCoordinateScaler | None = None,
 ) -> None:
     """座標リストをADBで順番にタップする共通処理。"""
     if interval_seconds is None:
@@ -201,10 +242,12 @@ def run_adb_coordinate_sequence(
         raise ValueError("debug_jitterは0〜2pxに制限されます")
     if require_screen_change and (timing_policy is None or screen_probe is None):
         raise ValueError("画面変化必須時はtiming_policyとscreen_probeが必要です")
+    scaler = coordinate_scaler or AdbCoordinateScaler(serial, adb_command)
     for index, point in enumerate(coordinates):
         if len(point) != 2:
             raise ValueError("座標は(x, y)の2要素で指定してください")
-        x, y = debug_jitter_coordinate(point, max_offset=debug_jitter, rng=jitter_rng) if debug_jitter else point
+        source_point = debug_jitter_coordinate(point, max_offset=debug_jitter, rng=jitter_rng) if debug_jitter else point
+        x, y = scaler.point(source_point)
         if debug_capture_dir is not None:
             _capture_tap_debug(
                 x, y, output_dir=debug_capture_dir, prefix=debug_capture_prefix, serial=serial,
@@ -256,6 +299,7 @@ def run_adb_swipe(
     operation_logger: object | None = None,
     task_name: str = "map_scan",
     timing_trace=None,
+    coordinate_scaler: AdbCoordinateScaler | None = None,
 ) -> None:
     """Send one guarded Android swipe for map panning.
 
@@ -270,15 +314,18 @@ def run_adb_swipe(
         raise RuntimeError("想定外画面のためスワイプを停止")
     if healthcheck:
         ensure_adb_connection(serial=serial, adb_command=adb_command)
+    scaler = coordinate_scaler or AdbCoordinateScaler(serial, adb_command)
+    actual_start = scaler.point(start)
+    actual_end = scaler.point(end)
     started = time.monotonic()
     subprocess.run(
         [adb_command, "-s", serial, "shell", "input", "swipe",
-         str(start[0]), str(start[1]), str(end[0]), str(end[1]), str(duration_ms)],
+         str(actual_start[0]), str(actual_start[1]), str(actual_end[0]), str(actual_end[1]), str(duration_ms)],
         check=True, capture_output=True, text=True,
     )
     if timing_trace is not None:
         timing_trace.record("adb_swipe_total", (time.monotonic() - started) * 1000,
-                            start=list(start), end=list(end), duration_ms=duration_ms)
+                            start=list(actual_start), end=list(actual_end), duration_ms=duration_ms)
     if operation_logger is not None:
         record = getattr(operation_logger, "record", None)
         if callable(record):
@@ -1162,5 +1209,3 @@ def enter_tile(
 
 if __name__ == "__main__":
     print("Computer Use の画面アダプターを接続して実行してください。")
-
-
