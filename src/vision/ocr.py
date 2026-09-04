@@ -152,11 +152,15 @@ class PaddleOCRAdapter:
         adapter._engine = PaddleOCR(
             # ゲーム画面の短い日本語ラベルでは v4 mobile を既定にする。
             # この選択は汎用ベンチマークではなく、本プロジェクトの実画面評価に基づく。
+            # PaddleOCR 3.x の言語別自動解決は v4 を日本語に紐付けないため、
+            # v4 の日本語対応 mobile モデル名を明示する。
+            text_detection_model_name="PP-OCRv4_mobile_det",
+            text_recognition_model_name="PP-OCRv4_mobile_rec",
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
             device=device,
-            lang="japan",
+            lang="ch",
             ocr_version=DEFAULT_OCR_VERSION,
         )
         return adapter
@@ -209,4 +213,3 @@ def _as_sequence(value: Any) -> list[Any] | None:
             return None
         return list(converted) if isinstance(converted, (list, tuple)) else None
     return None
-
