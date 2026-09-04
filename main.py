@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import os
 from pathlib import Path
 import queue
@@ -41,7 +42,7 @@ class BossGachaWindow:
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
         self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
-        self.passports = self._entry(form, "試行回数（1回1枚）", "1", 1)
+        self.passports = self._entry(form, "試行回数（1回1枚）", "100", 1)
         self.guild = self._entry(form, "ギルド（任意）", "", 2)
         self.difficulty = self._entry(form, "難易度", "10", 3)
         self.area3 = self._entry(form, "エリア3 許容ボス", "ベノムサラマンドラ", 4)
@@ -146,6 +147,7 @@ class BossGachaWindow:
             except queue.Empty:
                 break
             self.output.insert("end", line + "\n")
+            self._update_status_from_output(line)
             self.output.see("end")
         self.output.configure(state="disabled")
         if self.process and self.process.poll() is not None:
@@ -153,8 +155,24 @@ class BossGachaWindow:
             self.start_button.configure(state="normal")
             self.stop_button.configure(state="disabled")
             self.resume_button.configure(state="normal")
-            self.status.configure(text="停止／終了。再開画面を選択できます。")
+            if self.status.cget("text") in {"実行中", "再開中", "停止処理中"}:
+                self.status.configure(text="停止（手動または異常終了）／再開可能")
         self.root.after(100, self._drain_output)
+
+    def _update_status_from_output(self, line: str) -> None:
+        """CLIの最終JSONを、人が見分けやすい3分類で表示する。"""
+        try:
+            payload = json.loads(line)
+        except ValueError:
+            return
+        labels = {
+            "matched": "成功：対象ボスの組み合わせに一致",
+            "max_attempts": f"失敗：{payload.get('max_attempts', 100)}回の試行上限に到達",
+            "safety_stop": "停止：安全停止（入力を継続しません）",
+        }
+        label = labels.get(payload.get("status"))
+        if label:
+            self.status.configure(text=label)
 
     def stop(self) -> None:
         if self.process and self.process.poll() is None:

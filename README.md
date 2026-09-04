@@ -193,7 +193,7 @@ python scripts/debug_boss_gacha.py --observations path\to\observations.json
 
 引数なしで起動すると操作ウィンドウが開きます。ウィンドウの「開始」は確認ダイアログの後に ADB 入力を有効にした実機処理を開始し、「停止（即時）」は実行中のプロセスを直ちに終了します。停止・異常終了後は再開画面を選び、「再開」を押してください。
 
-入力する項目は ADB serial、今回の試行回数、エリア 3/5 の許容ボスです。1 試行につきパスポートを 1 枚消費します。開始前に BlueStacks の接続と対象画面を確認してください。
+入力する項目は ADB serial、今回の試行回数、エリア 3/5 の許容ボスです。既定の試行回数は100回で、1試行につきパスポートを1枚消費します。開始前に BlueStacks の接続と対象画面を確認してください。
 
 ```powershell
 python main.py
@@ -231,7 +231,7 @@ python main.py live `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
 
-`--passports N` は最大 N 回の試行を許可する指定で、N 枚を一括消費する指定ではありません。`--passports 0`、許容ボス未指定、画面不一致、OCR モデル未設定などの場合は安全停止します。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
+`--passports N` は「1枚消費する試行を最大N回まで許可する」指定です。既定値は100回で、N枚を一括消費する指定ではありません。結果は `matched`＝成功、`max_attempts`＝失敗（上限到達）、`safety_stop`＝停止（安全条件不成立）として区別されます。`--passports 0`、許容ボス未指定、画面不一致、OCRモデル未設定などの場合は停止します。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
 
 ## Git での変更手順
 

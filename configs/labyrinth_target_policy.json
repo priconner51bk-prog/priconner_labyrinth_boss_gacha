@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "policy_name": "target_boss_pair_only",
   "retry_until_match": true,
-  "max_attempts": 10,
+  "max_attempts": 100,
   "target_bosses": {
     "3": "ベノムサラマンドラ",
     "5": "ゴブリンロード"
@@ -10,5 +10,4 @@
   "on_mismatch": "withdraw_and_retry",
   "on_missing_boss_name": "safety_stop"
 }
-
 

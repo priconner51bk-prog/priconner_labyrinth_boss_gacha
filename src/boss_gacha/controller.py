@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 
-HARD_MAX_ATTEMPTS = 10
+HARD_MAX_ATTEMPTS = 100
 
 
 @dataclass(frozen=True)
 class BossGachaPolicy:
     target_bosses: Mapping[str, str]
-    max_attempts: int = 10
+    max_attempts: int = 100
     allowed_bosses: Mapping[str, Sequence[str]] | None = None
 
     def __post_init__(self) -> None:
@@ -33,7 +33,7 @@ class BossGachaPolicy:
         allowed = data.get("allowed_bosses")
         return cls(
             target_bosses={str(k): str(v) for k, v in data["target_bosses"].items()},
-            max_attempts=int(data.get("max_attempts", 10)),
+            max_attempts=int(data.get("max_attempts", 100)),
             allowed_bosses={str(k): tuple(str(name) for name in names)
                            for k, names in allowed.items()}
             if isinstance(allowed, Mapping) else None,

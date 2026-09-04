@@ -38,3 +38,18 @@ def test_gui_start_enables_stop_and_stop_kills_child_process():
             assert process.killed
     finally:
         root.destroy()
+
+
+def test_gui_distinguishes_success_failure_and_safety_stop():
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        window = BossGachaWindow(root)
+        window._update_status_from_output('{"status":"matched"}')
+        assert str(window.status["text"]).startswith("成功")
+        window._update_status_from_output('{"status":"max_attempts","max_attempts":100}')
+        assert str(window.status["text"]).startswith("失敗")
+        window._update_status_from_output('{"status":"safety_stop"}')
+        assert str(window.status["text"]).startswith("停止")
+    finally:
+        root.destroy()
