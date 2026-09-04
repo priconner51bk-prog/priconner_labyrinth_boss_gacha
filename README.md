@@ -168,7 +168,6 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 リポジトリ直下で実行します。
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
 python -m pytest -q
 ```
 

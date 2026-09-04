@@ -2,10 +2,9 @@
 
 ## ローカルテスト
 
-このサブプロジェクトには独立したパッケージ設定がないため、テスト前に `src` を `PYTHONPATH` に追加します。
+テスト設定は `pyproject.toml` に含まれているため、プロジェクトルートからそのまま実行できます。
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
 python -m pytest -q
 ```
 
