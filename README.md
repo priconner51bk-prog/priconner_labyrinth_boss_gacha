@@ -122,7 +122,7 @@ adb -s 127.0.0.1:5555 shell wm density
 標準の日本語モデルを使う場合は、実行時に `--default-models` を指定します。独自モデルを使う場合は検出モデルと認識モデルを両方指定します。
 
 ```powershell
-python scripts/task_boss_gacha_live.py `
+python main.py live `
   --serial 127.0.0.1:5555 --default-models
 ```
 
@@ -132,7 +132,7 @@ python scripts/task_boss_gacha_live.py `
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
-python scripts/task_boss_gacha_live.py --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555 --default-models
 ```
 
 画面 ID が取得でき、エラーや安全停止理由がないことを確認してから、[実機運用手順](docs/OPERATIONS.md) の実行手順へ進みます。
@@ -200,13 +200,13 @@ python main.py live --execute --passports 10 --default-models `
 最初は必ず preflight（`--execute` なし）で画面認識だけを確認します。
 
 ```powershell
-python scripts/task_boss_gacha_live.py --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555 --default-models
 ```
 
 入力を有効にする場合は、利用枚数、エリア 3/5 の許容ボスを明示します。
 
 ```powershell
-python scripts/task_boss_gacha_live.py `
+python main.py live `
   --execute --passports 10 --default-models `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```

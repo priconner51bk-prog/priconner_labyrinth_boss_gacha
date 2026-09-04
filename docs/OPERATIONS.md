@@ -30,7 +30,7 @@ adb -s 127.0.0.1:5555 shell wm density
 `--execute` を付けずに実行すると、現在画面の認識結果を JSON で出力して終了します。
 
 ```powershell
-python scripts/task_boss_gacha_live.py --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555 --default-models
 ```
 
 ここで ADB、画面テンプレート、またはローカルモジュールの import に失敗する場合は、入力を有効にしないで原因を解消します。
@@ -40,7 +40,7 @@ python scripts/task_boss_gacha_live.py --serial 127.0.0.1:5555 --default-models
 許容するボスはエリアごとに 1 つ以上指定します。`--passports` は今回の処理で使用してよい枚数です。
 
 ```powershell
-python scripts/task_boss_gacha_live.py `
+python main.py live `
   --execute --passports 10 --serial 127.0.0.1:5555 `
   --default-models `
   --area3-boss "エリア3のボス名" `
