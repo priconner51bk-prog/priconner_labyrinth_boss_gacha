@@ -28,7 +28,7 @@
       "confidence": "text_explicit",
       "needs_image_verification": false
     },
-    "TW": {
+    "トゥインクルウィッシュ": {
       "source_labels": ["6ヒヨリ", "6ユイ", "ニュイ", "アスヒヨ"],
       "recommended_members": ["★6ヒヨリ", "★6ユイ"],
       "optional_members": ["ニューイヤーユイ", "アストラルヒヨリ"],
@@ -36,14 +36,14 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "サレンディア": {
+    "プリンセスナイト サレンディア救護院": {
       "source_labels": ["6アヤネ"],
       "recommended_members": ["★6アヤネ"],
       "notes": "6アヤネを強く推奨。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "ナイトメア": {
+    "プリンセスナイト 王宮騎士団（NIGHTMARE）": {
       "source_labels": ["αクリス"],
       "recommended_members": ["アルファクリスティーナ"],
       "notes": "αクリスが最強との記載。",
@@ -64,14 +64,14 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "ディアボロス": {
+    "悪魔偽王国軍（ディアボロス）": {
       "source_labels": ["ハロシノ"],
       "recommended_members": ["ハロウィンシノブ"],
       "notes": "ハロシノは未使用だが記載内容が強そうなので採用候補。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "牧場": {
+    "動物苑 牧場（エリザベスパーク）": {
       "source_labels": ["ケツバトラー", "6リン"],
       "recommended_members": [],
       "avoid_members": ["ケツバトラー", "★6リン"],
@@ -79,21 +79,21 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "財団": {
+    "メルクリウス財団": {
       "source_labels": ["6ミフユ"],
       "recommended_members": ["★6ミフユ"],
       "notes": "6ミフユは確定枠。ショップで遺物を買うため資金を重視。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "キャラバン": {
+    "トワイライトキャラバン": {
       "source_labels": ["6ミツキ"],
       "recommended_members": ["★6ミツキ"],
       "notes": "6ミツキが確定枠。闇属性で進める方針。",
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "リトリリ": {
+    "リトルリリカル": {
       "source_labels": ["ミソギ", "ゴシキョ"],
       "recommended_members": ["ミソギ", "ミソギ", "ミソギ"],
       "alternatives": ["ゴシキョ"],
@@ -101,7 +101,7 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "自警団": {
+    "動物苑 自警団（カォン）": {
       "source_labels": ["光染めの3人", "6マホ"],
       "recommended_members": [],
       "optional_members": ["★6マホ"],
@@ -116,7 +116,7 @@
       "confidence": "text_explicit_partial",
       "needs_image_verification": true
     },
-    "ルーセント": {
+    "ルーセント学院": {
       "source_labels": ["6スズナ", "6イオ", "編スズナ", "クリイオ"],
       "recommended_members": ["★6スズナ", "★6イオ"],
       "optional_members": ["編成スズナ", "クリスマスイオ"],
@@ -126,5 +126,4 @@
     }
   }
 }
-
 
