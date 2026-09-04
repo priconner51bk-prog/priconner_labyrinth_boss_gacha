@@ -57,7 +57,7 @@ python main.py live `
   --area5-boss "ゴブリンロード"
 ```
 
-GUIではOCRモデルを選択せず、評価済みのPP-OCRv4標準モデルを固定使用します。CLIでは必要に応じて `--det-model`、`--rec-model` による個別モデル指定も可能です。`--default-models` と個別 OCR モデル指定を同時には使いません。
+GUIでは難易度とOCRモデルを選択せず、現在対応している難易度10と評価済みのPP-OCRv4標準モデルを固定使用します。CLIでは必要に応じて `--guild`、`--difficulty`、`--det-model`、`--rec-model` を指定できます。`--default-models` と個別 OCR モデル指定を同時には使いません。
 
 ## 途中復帰
 

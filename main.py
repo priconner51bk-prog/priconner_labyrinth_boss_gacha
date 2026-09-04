@@ -48,7 +48,6 @@ class BossGachaWindow:
     """実機処理を別プロセスで実行し、停止時は即時 kill する GUI。"""
 
     GUILDS = _guild_names()
-    DIFFICULTIES = tuple(str(value) for value in range(1, 11))
     AREA3_BOSSES = _config_names("boss_area3.json")
     AREA5_BOSSES = _config_names("boss_area5.json")
 
@@ -67,10 +66,6 @@ class BossGachaWindow:
         self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
         self.guild.set("美食殿")
         self.guild.grid(row=2, column=1, sticky="ew", pady=3)
-        ttk.Label(form, text="難易度").grid(row=3, column=0, sticky="w", pady=3)
-        self.difficulty = ttk.Combobox(form, values=self.DIFFICULTIES, state="readonly", width=30)
-        self.difficulty.set("10")
-        self.difficulty.grid(row=3, column=1, sticky="ew", pady=3)
         self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
         self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
         form.columnconfigure(1, weight=1)
@@ -116,7 +111,7 @@ class BossGachaWindow:
         if not serial or not passports or not area3 or not area5:
             raise ValueError("ADB serial、パスポート枚数、エリア3/5のボス名を入力してください。")
         command = [sys.executable, "-u", str(ROOT / "scripts" / "task_boss_gacha_live.py"), "--execute",
-                   "--serial", serial, "--passports", passports, "--difficulty", self.difficulty.get().strip() or "10",
+                   "--serial", serial, "--passports", passports,
                    "--area3-boss", area3[0], "--area5-boss", area5[0], "--guild", self.guild.get().strip()]
         for name in area3[1:]:
             command += ["--area3-boss", name]
@@ -149,7 +144,6 @@ class BossGachaWindow:
             f"BlueStacks にADB入力を送信してガチャを{action}します。\n\n"
             f"ADB serial：{self.serial.get()}\n"
             f"ギルド：{self.guild.get()}\n"
-            f"難易度：{self.difficulty.get()}\n"
             f"試行回数：最大{self.passports.get()}回\n"
             f"エリア3：{', '.join(area3)}\n"
             f"エリア5：{', '.join(area5)}\n"

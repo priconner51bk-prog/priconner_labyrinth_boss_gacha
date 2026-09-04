@@ -64,7 +64,6 @@ def test_gui_uses_automatic_resume_and_default_guild():
         assert "王宮騎士団（NIGHTMARE）" in window.GUILDS
         assert "リトルリリカル" in window.GUILDS
         assert len(window.GUILDS) == 14
-        assert window.difficulty.get() == "10"
         assert window.passports.get() == "100"
         assert window.AREA3_BOSSES == ("マダムエレクトラ", "フロストハウンド", "ダークガーゴイル", "グレーターゴーレム", "ベノムサラマンドラ")
         assert window.AREA5_BOSSES == ("キマイラ", "ゴブリンロード", "ラースドラゴン", "アルティマガーディアン", "ジャバウォック")
