@@ -15,6 +15,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 ROOT = Path(__file__).resolve().parent
+GUI_SETTINGS = ROOT / ".local_gui_settings.json"
 
 
 def _config_names(filename: str) -> tuple[str, ...]:
@@ -69,6 +70,7 @@ class BossGachaWindow:
         self.guild.grid(row=2, column=1, sticky="ew", pady=3)
         self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
         self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
+        self._load_gui_settings()
         form.columnconfigure(1, weight=1)
 
         buttons = ttk.Frame(root, padding=(12, 0))
@@ -104,6 +106,39 @@ class BossGachaWindow:
             variables[name] = variable
             ttk.Checkbutton(frame, text=name, variable=variable).grid(row=index // 2, column=index % 2, sticky="w", padx=(0, 12), pady=1)
         return variables
+
+    def _load_gui_settings(self) -> None:
+        """前回のGUI選択をローカル設定から復元する。設定はGit管理しない。"""
+        try:
+            data = json.loads(GUI_SETTINGS.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return
+        for name, widget in (("serial", self.serial), ("passports", self.passports)):
+            value = data.get(name)
+            if isinstance(value, str) and value:
+                widget.delete(0, "end")
+                widget.insert(0, value)
+        guild = data.get("guild")
+        if guild in self.GUILDS:
+            self.guild.set(guild)
+        for key, variables in (("area3", self.area3_vars), ("area5", self.area5_vars)):
+            selected = data.get(key)
+            if isinstance(selected, list):
+                for name, variable in variables.items():
+                    variable.set(name in selected)
+
+    def _save_gui_settings(self) -> None:
+        data = {
+            "serial": self.serial.get().strip(),
+            "passports": self.passports.get().strip(),
+            "guild": self.guild.get().strip(),
+            "area3": [name for name, variable in self.area3_vars.items() if variable.get()],
+            "area5": [name for name, variable in self.area5_vars.items() if variable.get()],
+        }
+        try:
+            GUI_SETTINGS.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            pass
 
     def _command(self, *, resume: bool = False) -> list[str]:
         serial, passports = self.serial.get().strip(), self.passports.get().strip()
@@ -215,6 +250,7 @@ class BossGachaWindow:
             self.status.configure(text="停止処理中")
 
     def close(self) -> None:
+        self._save_gui_settings()
         if self.process and self.process.poll() is None:
             self.process.kill()
         self.root.destroy()
