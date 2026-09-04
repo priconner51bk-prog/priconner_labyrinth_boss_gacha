@@ -51,12 +51,6 @@ class BossGachaWindow:
     DIFFICULTIES = tuple(str(value) for value in range(1, 11))
     AREA3_BOSSES = _config_names("boss_area3.json")
     AREA5_BOSSES = _config_names("boss_area5.json")
-    RESUME_SCREENS = {
-        "ギルド選択画面": "guild_select", "ギルド確認画面": "guild_confirm",
-        "出発ボーナス": "bonus", "アイテム報酬": "item_reward",
-        "初期キャラ画面": "initial_char", "ボス一覧マップ": "boss_map",
-        "ボス詳細画面": "boss_detail", "撤退確認画面": "withdraw_confirm",
-    }
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -79,10 +73,6 @@ class BossGachaWindow:
         self.difficulty.grid(row=3, column=1, sticky="ew", pady=3)
         self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
         self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
-        ttk.Label(form, text="再開画面").grid(row=9, column=0, sticky="w", pady=3)
-        self.resume_screen = ttk.Combobox(form, values=("", *self.RESUME_SCREENS), state="readonly", width=30)
-        self.resume_screen.set("")
-        self.resume_screen.grid(row=9, column=1, sticky="ew", pady=3)
         form.columnconfigure(1, weight=1)
 
         buttons = ttk.Frame(root, padding=(12, 0))
@@ -91,7 +81,7 @@ class BossGachaWindow:
         self.start_button.pack(side="left", padx=(0, 6))
         self.stop_button = ttk.Button(buttons, text="停止（即時）", command=self.stop, state="disabled")
         self.stop_button.pack(side="left", padx=6)
-        self.resume_button = ttk.Button(buttons, text="再開", command=self.resume, state="disabled")
+        self.resume_button = ttk.Button(buttons, text="再開（自動判定）", command=self.resume, state="disabled")
         self.resume_button.pack(side="left", padx=6)
 
         self.status = ttk.Label(root, text="待機中", padding=(12, 8))
@@ -134,11 +124,6 @@ class BossGachaWindow:
             command += ["--area5-boss", name]
         # OCRはこのプロジェクトで評価済みのPP-OCRv4標準モデルに固定する。
         command.append("--default-models")
-        if resume:
-            screen_label = self.resume_screen.get().strip()
-            if not screen_label:
-                raise ValueError("再開する画面を選択してください。")
-            command += ["--resume-screen", self.RESUME_SCREENS.get(screen_label, screen_label)]
         return command
 
     def start(self) -> None:

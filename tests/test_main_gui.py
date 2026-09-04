@@ -53,7 +53,7 @@ def test_gui_distinguishes_success_failure_and_safety_stop():
         root.destroy()
 
 
-def test_gui_uses_japanese_resume_labels_and_default_guild():
+def test_gui_uses_automatic_resume_and_default_guild():
     root = tk.Tk()
     root.withdraw()
     try:
@@ -68,10 +68,8 @@ def test_gui_uses_japanese_resume_labels_and_default_guild():
         assert window.passports.get() == "100"
         assert window.AREA3_BOSSES == ("マダムエレクトラ", "フロストハウンド", "ダークガーゴイル", "グレーターゴーレム", "ベノムサラマンドラ")
         assert window.AREA5_BOSSES == ("キマイラ", "ゴブリンロード", "ラースドラゴン", "アルティマガーディアン", "ジャバウォック")
-        assert window.resume_screen["values"][1] == "ギルド選択画面"
-        window.resume_screen.set("ボス一覧マップ")
         command = window._command(resume=True)
-        assert command[-1] == "boss_map"
+        assert "--resume-screen" not in command
         assert "--guild" in command and command[command.index("--guild") + 1] == "美食殿"
     finally:
         root.destroy()

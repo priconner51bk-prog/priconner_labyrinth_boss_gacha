@@ -57,11 +57,6 @@ def main() -> int:
     parser.add_argument("--det-model", type=Path)
     parser.add_argument("--rec-model", type=Path)
     parser.add_argument("--default-models", action="store_true", help="PaddleOCR標準日本語モデルを使用")
-    parser.add_argument(
-        "--resume-screen",
-        choices=("guild_select", "guild_confirm", "bonus", "item_reward", "initial_char", "boss_map", "boss_detail", "withdraw_confirm"),
-        help="挑戦中からユーザーが手動復帰した後の現在画面",
-    )
     args = parser.parse_args()
     if args.passports < 0:
         parser.error("--passports must be non-negative")
@@ -110,10 +105,6 @@ def main() -> int:
         return 2
     if not args.execute:
         return 0
-    resume_matches = args.resume_screen and (screen_id == args.resume_screen or (args.resume_screen == "bonus" and screen_id == "item_reward"))
-    if args.resume_screen and not resume_matches:
-        print(json.dumps({"status": "safety_stop", "reason": f"resume_screen_mismatch:{screen_id!r}!={args.resume_screen!r}"}, ensure_ascii=False))
-        return 2
     if args.passports <= 0:
         print(json.dumps({"status": "safety_stop", "reason": "passport_count_not_positive"}, ensure_ascii=False))
         return 2
@@ -140,19 +131,9 @@ def main() -> int:
     if screen_id == "labyrinth_top":
         try:
             if probe.target_visible("挑戦中"):
-                if args.resume_screen:
-                    try:
-                        observed_resume = observe_screen_stable()
-                    except Exception as exc:
-                        print(json.dumps({"status": "safety_stop", "reason": f"resume_screen_observation_failed:{type(exc).__name__}"}, ensure_ascii=False))
-                        return 2
-                    if not (observed_resume == args.resume_screen or (args.resume_screen == "bonus" and observed_resume == "item_reward")):
-                        print(json.dumps({"status": "safety_stop", "reason": f"resume_screen_mismatch:{observed_resume!r}!={args.resume_screen!r}"}, ensure_ascii=False))
-                        return 2
-                else:
                     print(json.dumps({
-                        "status": "user_confirmation_required",
-                        "reason": "challenge_active_requires_resume_assistance",
+                        "status": "safety_stop",
+                        "reason": "challenge_active_screen_is_ambiguous",
                         "screen_id": screen_id,
                     }, ensure_ascii=False))
                     return 2
@@ -355,7 +336,8 @@ def main() -> int:
         observed = re.sub(r"\s+", "", "".join(line.text for line in lines if line.confidence >= 0.55))
         return expected_text in observed
 
-    start_screen = args.resume_screen or screen_id
+    # 開始・再開とも現在画面を自動判定する。画面が曖昧な場合は入力せず停止する。
+    start_screen = screen_id
     if start_screen == "item_reward":
         start_screen = "bonus"
     if start_screen not in {"quest_menu", "labyrinth_top", "guild_select", "guild_confirm", "bonus", "initial_char", "boss_map", "boss_detail", "withdraw_confirm"}:
