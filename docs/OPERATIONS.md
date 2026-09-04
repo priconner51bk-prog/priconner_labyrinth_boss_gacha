@@ -45,7 +45,7 @@ python main.py live --serial 127.0.0.1:5555 --default-models
 
 ## 実行
 
-許容するボスはエリアごとに 1 つ以上指定します。`--passports` は今回の処理で使用してよい枚数です。
+許容するボスはエリアごとに 1 つ以上指定します。`--passports N` は最大 N 回の試行回数です。1 試行につきパスポートを 1 枚だけ消費し、N 枚を一括消費することはありません。
 
 ```powershell
 python main.py live `

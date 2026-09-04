@@ -45,7 +45,7 @@ def _boss_names() -> dict[str, set[str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="画面ガード付きボスガチャ（最大10回）")
     parser.add_argument("--execute", action="store_true", help="ADB入力を有効化（省略時はpreflightのみ）")
-    parser.add_argument("--passports", type=int, default=0, help="今回利用を許可するパスポート枚数。0なら安全停止")
+    parser.add_argument("--passports", type=int, default=0, help="今回許可する試行回数（1試行につき1枚消費）。0なら安全停止")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     parser.add_argument("--guild", help="出発時に選択するギルド（省略時は設定のpreferred_guilds先頭）")
     parser.add_argument("--difficulty", type=int, choices=range(1, 11), default=10,
