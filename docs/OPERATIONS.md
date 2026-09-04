@@ -47,12 +47,14 @@ python main.py live --serial 127.0.0.1:5555 --default-models
 
 許容するボスはエリアごとに 1 つ以上指定します。`--passports N` は最大 N 回の試行回数です。1 試行につきパスポートを 1 枚だけ消費し、N 枚を一括消費することはありません。
 
+既定の対象はエリア3の `ベノムサラマンドラ` とエリア5の `ゴブリンロード` です。各エリアには他の候補もあるため、候補一覧は `configs/boss_area3.json` と `configs/boss_area5.json` を確認してください。複数候補を許容する場合は、同じオプションを繰り返します。
+
 ```powershell
 python main.py live `
   --execute --passports 10 --serial 127.0.0.1:5555 `
   --default-models `
-  --area3-boss "エリア3のボス名" `
-  --area5-boss "エリア5のボス名"
+  --area3-boss "ベノムサラマンドラ" `
+  --area5-boss "ゴブリンロード"
 ```
 
 必要に応じて `--guild`、`--difficulty`、`--det-model`、`--rec-model` を指定できます。`--default-models` と個別 OCR モデル指定を同時には使いません。
