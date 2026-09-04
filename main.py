@@ -142,10 +142,19 @@ class BossGachaWindow:
             messagebox.showerror("入力エラー", str(exc))
             return
         action = "再開" if resume else "開始"
+        area3 = [name for name, variable in self.area3_vars.items() if variable.get()]
+        area5 = [name for name, variable in self.area5_vars.items() if variable.get()]
         if not messagebox.askyesno(
             "ADB入力の確認",
             f"BlueStacks にADB入力を送信してガチャを{action}します。\n\n"
-            "対象画面・ボス名・パスポート枚数を確認しましたか？",
+            f"ギルド：{self.guild.get()}\n"
+            f"難易度：{self.difficulty.get()}\n"
+            f"試行回数：最大{self.passports.get()}回\n"
+            f"エリア3：{', '.join(area3)}\n"
+            f"エリア5：{', '.join(area5)}\n"
+            "OCR：PP-OCRv4（固定）\n"
+            "再開地点：現在画面を自動判定\n\n"
+            "この内容で実機操作を実行しますか？",
         ):
             self.status.configure(text="キャンセルしました")
             return
