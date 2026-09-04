@@ -59,6 +59,9 @@ def test_gui_uses_japanese_resume_labels_and_default_guild():
     try:
         window = BossGachaWindow(root)
         assert window.guild.get() == "美食殿"
+        assert "TW" in window.GUILDS
+        assert "リトリリ" in window.GUILDS
+        assert len(window.GUILDS) == 14
         assert window.difficulty.get() == "10"
         assert window.passports.get() == "100"
         assert window.AREA3_BOSSES == ("マダムエレクトラ", "フロストハウンド", "ダークガーゴイル", "グレーターゴーレム", "ベノムサラマンドラ")

@@ -26,6 +26,17 @@ def _config_names(filename: str) -> tuple[str, ...]:
         return ()
 
 
+def _guild_names() -> tuple[str, ...]:
+    try:
+        data = json.loads((ROOT / "configs" / "labyrinth_guild_starting_members.json").read_text(encoding="utf-8"))
+        guilds = data.get("guilds", {})
+        if isinstance(guilds, dict):
+            return tuple(str(name) for name in guilds)
+    except (OSError, ValueError, TypeError):
+        pass
+    return ("美食殿", "フォレスティエ")
+
+
 def _run_mode(mode: str, forwarded: list[str]) -> int:
     module_name = {"debug": "scripts.debug_boss_gacha", "live": "scripts.task_boss_gacha_live"}[mode]
     module = importlib.import_module(module_name)
@@ -36,7 +47,7 @@ def _run_mode(mode: str, forwarded: list[str]) -> int:
 class BossGachaWindow:
     """実機処理を別プロセスで実行し、停止時は即時 kill する GUI。"""
 
-    GUILDS = ("美食殿", "フォレスティエ")
+    GUILDS = _guild_names()
     DIFFICULTIES = tuple(str(value) for value in range(1, 11))
     AREA3_BOSSES = _config_names("boss_area3.json")
     AREA5_BOSSES = _config_names("boss_area5.json")
