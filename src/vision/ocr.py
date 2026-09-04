@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .roi import NormalizedROI
 
+DEFAULT_OCR_VERSION = "PP-OCRv4"
+
 
 def gpu_utilization_percent(*, timeout_seconds: float = 0.5) -> float | None:
     """Return host GPU utilization when ``nvidia-smi`` is available.
@@ -148,13 +150,14 @@ class PaddleOCRAdapter:
         adapter.language = "japan"
         adapter._roi_cache = OrderedDict()
         adapter._engine = PaddleOCR(
-            text_detection_model_name="PP-OCRv5_mobile_det",
-            text_recognition_model_name="PP-OCRv5_mobile_rec",
+            # ゲーム画面の短い日本語ラベルでは v4 mobile を既定にする。
+            # この選択は汎用ベンチマークではなく、本プロジェクトの実画面評価に基づく。
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
             device=device,
             lang="japan",
+            ocr_version=DEFAULT_OCR_VERSION,
         )
         return adapter
 
@@ -206,5 +209,4 @@ def _as_sequence(value: Any) -> list[Any] | None:
             return None
         return list(converted) if isinstance(converted, (list, tuple)) else None
     return None
-
 
