@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "boss_type": "area_boss",
+  "area": 5,
+  "bosses": [
+    {"order": 1, "name": "キマイラ"},
+    {"order": 2, "name": "ゴブリンロード"},
+    {"order": 3, "name": "ラースドラゴン"},
+    {"order": 4, "name": "アルティマガーディアン", "ocr_aliases": ["アルティメガーディアン"]},
+    {"order": 5, "name": "ジャバウォック"}
+  ]
+}
+
+

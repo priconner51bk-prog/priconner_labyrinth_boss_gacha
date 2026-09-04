@@ -1,0 +1,1166 @@
+"""黎明界ラビリンスの定型移動ランナー。
+
+マス種別ごとの定型操作をスクリプトで即時実行する。
+判断が必要な箇所はユーザー確認へ戻す。
+"""
+
+from __future__ import annotations
+
+import time
+import subprocess
+import random
+from pathlib import Path
+from dataclasses import dataclass
+from typing import Callable, Mapping, Protocol
+
+from decision.timing import AdaptiveWaitPolicy, wait_until_hidden, wait_until_visible
+
+
+# 通常の画面遷移は短く確認し、戦闘結果だけ十分に待つ。
+FAST_TRANSITION_TIMEOUT_SECONDS = 3
+# 画面プローブを持たない互換アダプター向けの最小間隔。
+# 実機ADBは画面変化検知が優先されるため、ここで2秒を固定しない。
+SCRIPT_BUTTON_INTERVAL_SECONDS = 0.30
+EVENT_RESULT_OBSERVE_SECONDS = 4
+ACTION_SETTLE_SECONDS = SCRIPT_BUTTON_INTERVAL_SECONDS
+BATTLE_ACTION_DELAY_SECONDS = SCRIPT_BUTTON_INTERVAL_SECONDS
+BATTLE_RESULT_TIMEOUT_SECONDS = 120
+# 固定待機は廃止。戦闘結果は画面ポーリングで検知する。
+BATTLE_POST_START_WAIT_SECONDS = 0
+ADB_BATTLE_RESULT_MAX_WAIT_SECONDS = 60
+VICTORY_RESULT_ACTION_INTERVAL_SECONDS = 4
+FIXED_ORDER_FAST_PATH = True
+MINIMIZE_OPERATION_TIME = True
+SCRIPT_FIRST_AFTER_TRANSITION = True
+SCRIPT_TILE_ACTIONS = True
+AUTO_PROCESS_EXTREME_TILE = True
+USER_CONFIRMATION_DECISIONS = frozenset({"キャラ候補", "ボス判定", "遺物比較", "ルート分岐"})
+USE_SCRIPT_FOR_BATTLE_START = True
+BATTLE_SCRIPT_NAME = "戦闘スクリプト"
+BATTLE_START_SCENE = "戦闘開始"
+BATTLE_TILE_SCENE = "マス移動"
+BATTLE_VICTORY_SCENE = "戦闘勝利"
+BATTLE_DEFEAT_SCENE = "戦闘敗北"
+EXTREME_RELIC_SCENE = "遺物選択"
+EXTREME_CHARACTER_SCENE = "キャラ選択"
+SHOP_SCENE = "ショップ"
+COMPOSITION_REQUIRED_STAGES = frozenset({"3-5"})
+BATTLE_COMPOSITION_COUNT = 3
+EX_EQUIPMENT_MANUAL = True
+EX_EQUIPMENT_MANUAL_EXCEPTION_STAGES = frozenset({"3-5"})
+HELL_TILE_AVOID_AREAS = frozenset({4, 5})
+HELL_TILE_RELIC_LEVEL_THRESHOLD = 15
+ROUTE_TILE_PRIORITY = ("Extreme", "通常", "遺物", "コネクトサイン", "ショップ", "イベント", "ボス", "HELL")
+FIXED_BATTLE_BUTTON_POSITION = True
+EX_AND_BATTLE_SAME_POSITION = True
+BATTLE_BUTTON_ORDER = ("右", "左")
+CHECK_ROUTE_ON_AREA_CHANGE = True
+AREA3_ROUTE = ("通常", "遺物", "コネクトサイン", "Extreme", "ショップ", "ボス")
+THREE_CHOICE_ORDER = (3, 2, 1)
+BOSS_NAME_CONFIRM_SEQUENCE = ("左BOSS", "閉じる", "右BOSS", "閉じる")
+
+# BlueStacksのADB画面はウィンドウ枠を含まない1280x720座標を使用する。
+ADB_SERIAL = "127.0.0.1:5555"
+ADB_HEALTHCHECK_TIMEOUT_SECONDS = 3
+MAP_SWIPE_START = (1120, 360)
+MAP_SWIPE_END = (160, 360)
+MAP_SWIPE_DURATION_MS = 300
+
+
+def debug_jitter_coordinate(
+    point: tuple[int, int], *, max_offset: int = 2, rng: random.Random | None = None
+) -> tuple[int, int]:
+    """当たり判定検証用の微小ずらし。本番用途では呼び出さない。"""
+    if len(point) != 2 or max_offset < 0:
+        raise ValueError("point/max_offsetが不正です")
+    source = rng or random.Random()
+    return (
+        point[0] + source.randint(-max_offset, max_offset),
+        point[1] + source.randint(-max_offset, max_offset),
+    )
+ADB_BUTTON_COORDINATES: Mapping[str, tuple[int, int]] = {
+    "EX装備": (817, 610),
+    "おまかせ装備": (790, 640),
+    # 「物理防御貫通」ボタン後に開く優先ステータス画面のラジオ位置。
+    "物理防御貫通": (778, 243),
+    "物理防御貫通ラジオ": (387, 336),
+    "OK": (786, 638),
+    "移動先確認OK": (785, 495),
+    "装備確定": (1085, 640),
+    "キャンセル": (195, 640),
+    "バトル開始": (1135, 605),
+    "次へ": (1105, 650),
+    "閉じる": (640, 640),
+    # エリアマップからの撤退と確認ダイアログ。
+    "撤退する": (910, 650),
+    "撤退確認OK": (785, 495),
+    # キャラ／遺物の3候補ボタン（左・中央・右）。
+    "候補1": (300, 590),
+    "候補2": (640, 590),
+    "候補3": (980, 590),
+    "ショップ購入1": (330, 350),
+    "ショップ購入2": (720, 350),
+    "ショップ購入3": (1110, 350),
+    "購入確認OK": (785, 575),
+    "購入完了OK": (640, 495),
+    "ショップ更新": (450, 648),
+    "ショップ閉じる": (1090, 635),
+    "ショップ終了OK": (785, 495),
+    "ボスマス": (640, 350),
+    # 初期キャラ選択画面の左下「マップ」ボタン。
+    "マップ": (90, 640),
+    "フォレスティエ": (1090, 560),
+    "ギルド_フォレスティエ": (1090, 560),
+    "ギルド選択確認": (940, 635),
+    # エリアマップ上部のBOSSタイムライン。現在の1280x720レイアウトでは
+    # 旧マップノード座標ではなく、上部の詳細ボタン中心を押す。
+    "左BOSS": (675, 50),
+    "右BOSS": (825, 50),
+    "ボス移動OK": (785, 495),
+    "パーティ1": (130, 120),
+    "パーティ2": (300, 120),
+    "パーティ3": (450, 120),
+}
+
+# 同一座標に別の意味のボタンが存在する画面遷移用座標。
+# 必ず screen_id と組み合わせて参照し、座標だけを使い回さない。
+ADB_SCREEN_COORDINATES: Mapping[str, Mapping[str, tuple[int, int]]] = {
+    "quest_menu": {"ラビリンス": (1150, 540)},
+    "labyrinth_top": {"出発": (780, 390)},
+    "character_join": {"閉じる": (640, 580)},
+    "battle_tile_normal": {"挑戦する": (1120, 610)},
+    "event_confirm": {"イベント移動OK": (785, 495)},
+    "event_battle_choice": {"イベント通常選択": (470, 590)},
+    "item_reward": {"アイテム報酬閉じる": (640, 640)},
+    "relic_choice": {"遺物選択": (270, 620)},
+    "shop": {"ショップ購入1": (330, 350), "ショップ購入2": (720, 350), "ショップ購入3": (1110, 350)},
+    "shop_purchase_confirm": {"購入確認OK": (785, 575)},
+    "shop_purchase_complete": {"購入完了OK": (640, 495)},
+    "shop_exit_confirm": {"ショップ終了OK": (785, 495)},
+    "battle_party": {"バトル開始": (1135, 605)},
+    "ex_auto_dialog": {"EX自動設定OK": (785, 638)},
+}
+
+
+def screen_coordinate(screen_id: str, label: str) -> tuple[int, int]:
+    """画面IDが一致した場合だけ、画面固有のADB座標を返す。"""
+    try:
+        return ADB_SCREEN_COORDINATES[screen_id][label]
+    except KeyError as exc:
+        raise RuntimeError(f"画面固有座標が未登録です: {screen_id}/{label}") from exc
+
+
+def restart_adb_connection(
+    *, serial: str = ADB_SERIAL, adb_command: str = "adb", timeout_seconds: float = ADB_HEALTHCHECK_TIMEOUT_SECONDS
+) -> None:
+    """ADBサーバーを再起動し、対象BlueStacksへ再接続する共通復旧処理。"""
+    subprocess.run([adb_command, "kill-server"], check=False, capture_output=True, text=True, timeout=timeout_seconds)
+    subprocess.run([adb_command, "start-server"], check=True, capture_output=True, text=True, timeout=timeout_seconds)
+    subprocess.run([adb_command, "connect", serial], check=False, capture_output=True, text=True, timeout=timeout_seconds)
+
+
+def ensure_adb_connection(
+    *, serial: str = ADB_SERIAL, adb_command: str = "adb", timeout_seconds: float = ADB_HEALTHCHECK_TIMEOUT_SECONDS
+) -> None:
+    """タップ前のADB疎通確認。失敗時は1回だけ再起動・再接続して再確認する。"""
+    command = [adb_command, "-s", serial, "get-state"]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
+        return
+    except (OSError, subprocess.SubprocessError) as first_error:
+        try:
+            restart_adb_connection(serial=serial, adb_command=adb_command, timeout_seconds=timeout_seconds)
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
+        except (OSError, subprocess.SubprocessError) as second_error:
+            raise RuntimeError(f"ADB接続を復旧できません: {serial}") from second_error
+
+
+def run_adb_coordinate_sequence(
+    coordinates: list[tuple[int, int]] | tuple[tuple[int, int], ...],
+    *,
+    serial: str = ADB_SERIAL,
+    adb_command: str = "adb",
+    interval_seconds: float | None = None,
+    timing_policy: AdaptiveWaitPolicy | None = None,
+    screen_probe: Callable[[], str | None] | None = None,
+    healthcheck: bool = False,
+    debug_jitter: int = 0,
+    jitter_rng: random.Random | None = None,
+    debug_capture_dir: str | Path | None = None,
+    debug_capture_prefix: str = "tap_before",
+    require_screen_change: bool = False,
+    timing_trace=None,
+    previous_screen_token: str | None = None,
+) -> None:
+    """座標リストをADBで順番にタップする共通処理。"""
+    if interval_seconds is None:
+        interval_seconds = SCRIPT_BUTTON_INTERVAL_SECONDS
+    if interval_seconds < 0:
+        raise ValueError("タップ間隔は0以上で指定してください")
+    if debug_jitter < 0 or debug_jitter > 2:
+        raise ValueError("debug_jitterは0〜2pxに制限されます")
+    if require_screen_change and (timing_policy is None or screen_probe is None):
+        raise ValueError("画面変化必須時はtiming_policyとscreen_probeが必要です")
+    for index, point in enumerate(coordinates):
+        if len(point) != 2:
+            raise ValueError("座標は(x, y)の2要素で指定してください")
+        x, y = debug_jitter_coordinate(point, max_offset=debug_jitter, rng=jitter_rng) if debug_jitter else point
+        if debug_capture_dir is not None:
+            _capture_tap_debug(
+                x, y, output_dir=debug_capture_dir, prefix=debug_capture_prefix, serial=serial,
+            )
+        if healthcheck:
+            health_started = time.monotonic()
+            ensure_adb_connection(serial=serial, adb_command=adb_command)
+            if timing_trace is not None:
+                timing_trace.record("adb_healthcheck", (time.monotonic() - health_started) * 1000, serial=serial)
+        if timing_policy is not None and screen_probe is not None:
+            # Callers that just validated the target can pass that token to
+            # avoid an identical ADB capture immediately before the tap.
+            previous_token = previous_screen_token if index == 0 and previous_screen_token is not None else screen_probe()
+        else:
+            previous_token = None
+        if timing_trace is not None and screen_probe is not None:
+            timing_trace.record("screen_probe_before", 0.0, token=previous_token)
+        started = time.monotonic()
+        subprocess.run(
+            [adb_command, "-s", serial, "shell", "input", "tap", str(x), str(y)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if timing_policy is not None and screen_probe is not None:
+            wait_started = time.monotonic()
+            _, _, changed = timing_policy.wait_for_change_checked(previous_token, screen_probe)
+            if timing_trace is not None:
+                timing_trace.record("screen_change_wait", (time.monotonic() - wait_started) * 1000,
+                                     changed=changed)
+            if require_screen_change and not changed:
+                raise RuntimeError(f"タップ後に画面変化がないため停止: ({x},{y})")
+        else:
+            time.sleep(max(0.0, interval_seconds - (time.monotonic() - started)))
+        if timing_trace is not None:
+            timing_trace.record("adb_tap_total", (time.monotonic() - started) * 1000,
+                                 coordinate=[x, y])
+
+
+def run_adb_swipe(
+    start: tuple[int, int],
+    end: tuple[int, int],
+    *,
+    duration_ms: int = MAP_SWIPE_DURATION_MS,
+    serial: str = ADB_SERIAL,
+    adb_command: str = "adb",
+    healthcheck: bool = False,
+    screen_guard: Callable[[], bool] | None = None,
+    operation_logger: object | None = None,
+    task_name: str = "map_scan",
+    timing_trace=None,
+) -> None:
+    """Send one guarded Android swipe for map panning.
+
+    The caller supplies the screen guard; a rejected/unknown screen never
+    reaches ``input swipe``.  Coordinates are Android client coordinates.
+    """
+    if len(start) != 2 or len(end) != 2 or duration_ms < 0:
+        raise ValueError("スワイプ座標または時間が不正です")
+    if screen_guard is None:
+        raise RuntimeError("画面ガード未指定のためスワイプを停止")
+    if not bool(screen_guard()):
+        raise RuntimeError("想定外画面のためスワイプを停止")
+    if healthcheck:
+        ensure_adb_connection(serial=serial, adb_command=adb_command)
+    started = time.monotonic()
+    subprocess.run(
+        [adb_command, "-s", serial, "shell", "input", "swipe",
+         str(start[0]), str(start[1]), str(end[0]), str(end[1]), str(duration_ms)],
+        check=True, capture_output=True, text=True,
+    )
+    if timing_trace is not None:
+        timing_trace.record("adb_swipe_total", (time.monotonic() - started) * 1000,
+                            start=list(start), end=list(end), duration_ms=duration_ms)
+    if operation_logger is not None:
+        record = getattr(operation_logger, "record", None)
+        if callable(record):
+            record(
+                task=task_name,
+                purpose="エリアマス確認のマップ走査",
+                screen_before="操作前画面をガード済み",
+                action="ADB swipe",
+                coordinate={"start": list(start), "end": list(end)},
+                adb_serial=serial,
+                outcome="ADB送信完了",
+                duration_ms=round((time.monotonic() - started) * 1000, 1),
+                screen_after="観測コールバックで確認",
+            )
+
+
+def scan_map_layout(
+    adapter: "ScreenAdapter",
+    *,
+    observe_layout: Callable[[], object | None],
+    at_right_edge: Callable[[object | None], bool],
+    at_left_edge: Callable[[object | None], bool],
+    max_swipes: int = 12,
+) -> dict[str, object] | str:
+    """Scan map panels rightward, then deterministically return to the left.
+
+    ``observe_layout`` is responsible for the smallest map ROI.  No swipe is
+    sent until the current panel is observed; missing observations and edge
+    timeouts are safety-stop results.
+    """
+    if max_swipes < 1:
+        raise ValueError("max_swipes must be positive")
+    swipe = getattr(adapter, "swipe", None)
+    if not callable(swipe):
+        return "安全停止: マップスワイプが未対応です"
+    layouts: list[object] = []
+    for _ in range(max_swipes + 1):
+        layout = observe_layout()
+        if layout is None:
+            return "安全停止: マップ配置を確認できません"
+        layouts.append(layout)
+        if at_right_edge(layout):
+            break
+        swipe(MAP_SWIPE_START, MAP_SWIPE_END)
+    else:
+        return "安全停止: マップ右端へ到達できません"
+    for _ in range(max_swipes + 1):
+        layout = observe_layout()
+        if layout is None:
+            return "安全停止: マップ左戻りを確認できません"
+        if at_left_edge(layout):
+            return {"area_map": layouts, "returned_left": True, "swipe_count": len(layouts) - 1}
+        swipe(MAP_SWIPE_END, MAP_SWIPE_START)
+    return "安全停止: マップ左端へ復帰できません"
+
+
+def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, serial: str = ADB_SERIAL) -> Path:
+    """タップ直前画面に予定座標を描画して保存する検証用処理。"""
+    from PIL import Image, ImageDraw
+    from vision.capture import AdbScreenCapture
+
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    index = len(list(destination.glob(f"{prefix}_*.png"))) + 1
+    source = destination / f"{prefix}_{index:04d}_source.png"
+    overlay = destination / f"{prefix}_{index:04d}.png"
+    AdbScreenCapture(serial=serial).capture(source)
+    image = Image.open(source).convert("RGB")
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((x - 10, y - 10, x + 10, y + 10), outline=(255, 0, 0), width=3)
+    draw.line((x - 20, y, x + 20, y), fill=(255, 0, 0), width=2)
+    draw.line((x, y - 20, x, y + 20), fill=(255, 0, 0), width=2)
+    draw.text((x + 12, y + 12), f"TAP ({x},{y})", fill=(255, 0, 0))
+    image.save(overlay, format="PNG")
+    return overlay
+
+
+def validate_three_choice(choice: int) -> int:
+    """3択の指定番号をそのまま固定位置操作へ渡す。"""
+    if choice not in THREE_CHOICE_ORDER:
+        raise ValueError("3択は1、2、3のいずれかを指定してください")
+    return choice
+
+
+def fallback_route_choice(has_choices: bool) -> int | None:
+    """ルート候補がなければ既定の3番へ進む。"""
+    return None if has_choices else 3
+
+
+def should_avoid_hell_tile(area: int, relic_level_total: int) -> bool:
+    """エリア4・5では、遺物レベル合計15以上を前提にヘルマスを避ける。"""
+    if area < 0 or relic_level_total < 0:
+        raise ValueError("エリアと遺物レベル合計は0以上で指定してください")
+    return area in HELL_TILE_AVOID_AREAS and relic_level_total >= HELL_TILE_RELIC_LEVEL_THRESHOLD
+
+
+def prioritize_route_tiles(
+    tile_types: list[str], *, area: int, relic_level_total: int
+) -> list[str]:
+    """候補マスを優先順に並べる。エリア4・5はNORMALを最優先する。"""
+    if area < 0 or relic_level_total < 0:
+        raise ValueError("エリアと遺物レベル合計は0以上で指定してください")
+    order = {label: index for index, label in enumerate(ROUTE_TILE_PRIORITY)}
+    candidates = list(dict.fromkeys(tile_types))
+    if should_avoid_hell_tile(area, relic_level_total):
+        candidates = [tile for tile in candidates if tile != "HELL"]
+    return sorted(candidates, key=lambda tile: order.get(tile, len(order)))
+
+
+class ScreenAdapter(Protocol):
+    def is_visible(self, label: str) -> bool: ...
+    def click(self, label: str) -> None: ...
+
+    def wait_until_visible(self, label: str, timeout_seconds: int = 60) -> bool: ...
+
+    def is_selected(self, label: str) -> bool: ...
+
+    def finish_if_present(self, *labels: str) -> bool: ...
+
+    def wait_until_hidden(self, label: str, timeout_seconds: float = 1.5) -> bool: ...
+
+
+class AdbScreenAdapter:
+    """固定座標のラビリンス操作をBlueStacksへADBで送るアダプター。
+
+    座標はADBの端末画面座標で指定する（BlueStacksの外枠座標ではない）。
+    画面認識が必要な操作は、呼び出し側の認識アダプターへ委譲する。
+    """
+
+    def __init__(
+        self,
+        coordinates: Mapping[str, tuple[int, int]] | None = None,
+        serial: str = ADB_SERIAL,
+        adb_command: str = "adb",
+        operation_logger: object | None = None,
+        task_name: str = "adb_script",
+        screen_guard: Callable[[str], bool] | None = None,
+        timing_policy: AdaptiveWaitPolicy | None = None,
+        screen_probe: Callable[[], str | None] | None = None,
+        visibility_probe: Callable[[str], bool] | None = None,
+        adb_healthcheck: bool = False,
+        debug_capture_dir: str | Path | None = None,
+        require_screen_change: bool = False,
+        timing_trace=None,
+    ) -> None:
+        self.coordinates = dict(coordinates or ADB_BUTTON_COORDINATES)
+        self.serial = serial
+        self.adb_command = adb_command
+        self.operation_logger = operation_logger
+        self.task_name = task_name
+        self.screen_guard = screen_guard
+        # プローブが渡された場合は、固定2秒ではなく共通の軽量待機を自動利用する。
+        self.timing_policy = timing_policy or (AdaptiveWaitPolicy() if screen_probe is not None else None)
+        self.screen_probe = screen_probe
+        self.visibility_probe = visibility_probe
+        self.adb_healthcheck = adb_healthcheck
+        self.debug_capture_dir = debug_capture_dir
+        self.require_screen_change = require_screen_change
+        self.timing_trace = timing_trace
+        # is_visible() 直後に click() が同じROIを再認識する二重ADB取得を
+        # 防ぐ。短いTTLに限定し、タップ後は必ず無効化する。
+        self._visibility_cache: dict[str, tuple[float, bool]] = {}
+        self._visibility_cache_ttl = 0.20
+
+    def is_visible(self, label: str) -> bool:
+        if label not in self.coordinates:
+            return False
+        # A coordinate entry is not evidence that the control is on screen.
+        # When a live target probe is available, use it for every caller
+        # (including the fixed departure script) so stale coordinates cannot
+        # trigger an input on a different Android screen.
+        if self.visibility_probe is not None:
+            cached = self._visibility_cache.get(label)
+            if cached is not None and time.monotonic() - cached[0] <= self._visibility_cache_ttl:
+                return cached[1]
+            try:
+                visible = bool(self.visibility_probe(label))
+                self._visibility_cache[label] = (time.monotonic(), visible)
+                return visible
+            except Exception:
+                return False
+        return True
+
+    def click(self, label: str) -> None:
+        operation_started = time.monotonic()
+        if self.screen_guard is not None:
+            try:
+                safe = bool(self.screen_guard(label))
+            except Exception as exc:
+                raise RuntimeError(f"画面ガードの判定に失敗したため停止: {label}") from exc
+            if not safe:
+                raise RuntimeError(f"想定外画面のためADB操作を停止: {label}")
+        # 座標が登録されているだけではタップしない。現在画面の対象表示を
+        # 軽量プローブで確認できる場合に限り、表示中の対象へ送信する。
+        if self.visibility_probe is not None:
+            try:
+                cached = self._visibility_cache.get(label)
+                if cached is not None and time.monotonic() - cached[0] <= self._visibility_cache_ttl:
+                    visible = cached[1]
+                else:
+                    visible = bool(self.visibility_probe(label))
+            except Exception as exc:
+                raise RuntimeError(f"タップ対象の表示確認に失敗したため停止: {label}") from exc
+            if not visible:
+                raise RuntimeError(f"タップ対象が表示されていないため停止: {label}")
+        try:
+            x, y = self.coordinates[label]
+        except KeyError as exc:
+            raise KeyError(f"ADB座標が未登録です: {label}") from exc
+        run_adb_coordinate_sequence(
+            [(x, y)], serial=self.serial, adb_command=self.adb_command,
+            timing_policy=self.timing_policy, screen_probe=self.screen_probe,
+            healthcheck=self.adb_healthcheck,
+            debug_capture_dir=self.debug_capture_dir,
+            debug_capture_prefix=self.task_name,
+            require_screen_change=self.require_screen_change,
+            timing_trace=self.timing_trace,
+        )
+        self._visibility_cache.clear()
+        if self.operation_logger is not None:
+            record = getattr(self.operation_logger, "record", None)
+            if callable(record):
+                record(
+                    task=self.task_name,
+                    purpose=f"定型操作: {label}",
+                    screen_before="未取得（操作前画面を呼び出し側で記録）",
+                    action=f"ADB tap: {label}",
+                    coordinate=(x, y),
+                    adb_serial=self.serial,
+                    outcome="ADB送信完了",
+                    duration_ms=round((time.monotonic() - operation_started) * 1000, 1),
+                    screen_after="未取得（操作後画面を呼び出し側で記録）",
+                )
+
+    def swipe(self, start: tuple[int, int] = MAP_SWIPE_START,
+              end: tuple[int, int] = MAP_SWIPE_END,
+              *, duration_ms: int = MAP_SWIPE_DURATION_MS) -> None:
+        """Pan the open map while applying the same screen guard as taps."""
+        run_adb_swipe(
+            start, end, duration_ms=duration_ms, serial=self.serial,
+            adb_command=self.adb_command, healthcheck=self.adb_healthcheck,
+            screen_guard=(lambda: bool(self.screen_guard("マップ"))) if self.screen_guard else None,
+            operation_logger=self.operation_logger, task_name=self.task_name,
+            timing_trace=self.timing_trace,
+        )
+
+    def wait_until_visible(self, label: str, timeout_seconds: int = 60) -> bool:
+        if self.visibility_probe is None:
+            return self.is_visible(label)
+        return wait_until_visible(
+            lambda: bool(self.visibility_probe(label)),
+            timeout_seconds=float(timeout_seconds),
+        )
+
+    def wait_until_hidden(self, label: str, timeout_seconds: float = 1.5) -> bool:
+        if self.visibility_probe is None:
+            return False
+        return wait_until_hidden(
+            lambda: bool(self.visibility_probe(label)),
+            timeout_seconds=timeout_seconds,
+        )
+
+    def is_selected(self, label: str) -> bool:
+        return False
+
+    def finish_if_present(self, *labels: str) -> bool:
+        for label in labels:
+            if self.is_visible(label):
+                self.click(label)
+                return True
+        return False
+
+
+def click_and_wait(adapter: ScreenAdapter, label: str, *, wait_hidden: bool = False) -> None:
+    """クリック後、必要なら対象要素が消えるまでピンポイント確認する。"""
+    adapter.click(label)
+    if wait_hidden and not adapter.wait_until_hidden(label):
+        raise RuntimeError(f"操作対象が消えないため停止: {label}")
+    if not wait_hidden and not isinstance(adapter, AdbScreenAdapter):
+        time.sleep(SCRIPT_BUTTON_INTERVAL_SECONDS)
+
+
+CANDIDATE_BUTTONS = ("候補1", "候補2", "候補3")
+SHOP_PURCHASE_BUTTONS = ("ショップ購入1", "ショップ購入2", "ショップ購入3")
+
+
+def select_candidate_and_close(adapter: ScreenAdapter, choice: int) -> str:
+    """候補を選択し、同じ処理として続けて閉じる。"""
+    if choice not in (1, 2, 3):
+        raise ValueError("候補は1、2、3のいずれかを指定してください")
+    candidate = CANDIDATE_BUTTONS[choice - 1]
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(candidate):
+        return f"画面確認待ち: {candidate}"
+    click_and_wait(adapter, candidate)
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible("閉じる"):
+        return "画面確認待ち: 閉じる"
+    click_and_wait(adapter, "閉じる")
+    return f"{candidate}を選択して閉じました"
+
+
+def play_janken_event(adapter: ScreenAdapter, choice: int = 2) -> str:
+    """じゃんけんイベントは候補2を選び、結果を少し表示してから閉じる。"""
+    if choice not in (1, 2, 3):
+        raise ValueError("じゃんけん候補は1、2、3のいずれかを指定してください")
+    candidate = CANDIDATE_BUTTONS[choice - 1]
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(candidate):
+        return f"画面確認待ち: {candidate}"
+    click_and_wait(adapter, candidate)
+    if isinstance(adapter, AdbScreenAdapter) and adapter.visibility_probe is not None:
+        if not adapter.wait_until_visible("閉じる", timeout_seconds=FAST_TRANSITION_TIMEOUT_SECONDS):
+            return "画面確認待ち: 閉じる"
+        observed = "表示確認後"
+    else:
+        time.sleep(EVENT_RESULT_OBSERVE_SECONDS)
+        observed = f"{EVENT_RESULT_OBSERVE_SECONDS}秒表示後"
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible("閉じる"):
+        return "画面確認待ち: 閉じる"
+    click_and_wait(adapter, "閉じる")
+    return f"じゃんけん{candidate}を選択し、{observed}に閉じました"
+
+
+def confirm_shop_move(adapter: ScreenAdapter) -> str:
+    """ショップマス選択後の移動確認を確定する。"""
+    label = "移動先確認OK"
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+        return f"画面確認待ち: {label}"
+    click_and_wait(adapter, label)
+    return "ショップ移動を確定しました"
+
+
+def select_boss_and_confirm(adapter: ScreenAdapter) -> str:
+    """ボスマス選択後の移動確認OKまでを1セットで実行する。"""
+    for label in ("ボスマス", "ボス移動OK"):
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return "ボスマスを選択して移動を確定しました"
+
+
+def confirm_boss_names(
+    adapter: ScreenAdapter,
+    read_boss_name: Callable[[str], str | None],
+    *,
+    wait_for_map_return: Callable[[], bool] | None = None,
+) -> dict[str, str] | str:
+    """左右のボス名を、必ず表示確認を挟んで順番に取得する。
+
+    左側の詳細を閉じる前に右側へ進むことはない。名前が空、又は
+    ``None`` の場合は安全停止し、閉じる・次のボス・挑戦操作を行わない。
+    ``read_boss_name`` は画面認識側（OCR）から現在表示中の名前を返す。
+    """
+    names: dict[str, str] = {}
+    if isinstance(adapter, AdbScreenAdapter) and adapter.screen_guard is None:
+        return "安全停止: ADBボス確認には画面ガードが必要です"
+    for side, open_label, close_label in (
+        ("left", "左BOSS", "閉じる"),
+        ("right", "右BOSS", "閉じる"),
+    ):
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(open_label):
+            return f"安全停止: {open_label}が表示されていません"
+        if isinstance(adapter, AdbScreenAdapter) and adapter.visibility_probe is not None:
+            if not adapter.wait_until_visible(open_label, timeout_seconds=2):
+                return f"安全停止: {open_label}の表示復帰を確認できません"
+        click_and_wait(adapter, open_label)
+        name = read_boss_name(side)
+        if not isinstance(name, str) or not name.strip():
+            return f"安全停止: {side}ボス名を確認できません"
+        names[side] = name.strip()
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(close_label):
+            return f"安全停止: {close_label}が表示されていません（{side}ボス確認後）"
+        click_and_wait(adapter, close_label)
+        # 左詳細を閉じた直後は復帰アニメーション中のことがある。
+        # マップ画面への復帰を確認できるまで、右ボスへのタップを許可しない。
+        if side == "left" and wait_for_map_return is not None:
+            if not wait_for_map_return():
+                return "安全停止: 左ボス詳細を閉じた後、マップ復帰を確認できません"
+    return names
+
+
+def open_map_and_confirm_boss_names(
+    adapter: ScreenAdapter,
+    read_boss_name: Callable[[str], str | None],
+    *,
+    wait_for_map_return: Callable[[], bool] | None = None,
+) -> dict[str, str] | str:
+    """初期キャラ画面から、マップ表示完了後にボス名を確認する。"""
+    if isinstance(adapter, AdbScreenAdapter) and adapter.screen_guard is None:
+        return "安全停止: ADBマップ操作には画面ガードが必要です"
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible("マップ"):
+        return "安全停止: マップボタンが表示されていません"
+    click_and_wait(
+        adapter,
+        "マップ",
+        wait_hidden=(not isinstance(adapter, AdbScreenAdapter))
+        or getattr(adapter, "visibility_probe", None) is not None,
+    )
+    return confirm_boss_names(
+        adapter,
+        read_boss_name,
+        wait_for_map_return=wait_for_map_return,
+    )
+
+
+def challenge_confirmed_boss(
+    adapter: ScreenAdapter,
+    *,
+    boss_name_confirmed: bool,
+    stage: str | None = None,
+    composition_confirmed: bool = False,
+) -> str:
+    """ボス名と必要な編成の確認後だけ挑戦ボタンを押す。"""
+    if not boss_name_confirmed:
+        return "ユーザー確認待ち: ボス名"
+    if stage in COMPOSITION_REQUIRED_STAGES and not composition_confirmed:
+        return "ユーザー確認待ち: 編成"
+    label = "挑戦する"
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+        return f"画面確認待ち: {label}"
+    click_and_wait(adapter, label)
+    return "ボス名確認済み。挑戦します"
+
+
+def confirm_three_parties_and_start(adapter: ScreenAdapter) -> str:
+    """パーティ1・2・3を順に表示確認し、パーティ3の状態で開始する。"""
+    for label in ("パーティ1", "パーティ2", "パーティ3", "バトル開始"):
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return "3編成を確認し、パーティ3でバトル開始しました"
+
+
+def purchase_shop_candidate(adapter: ScreenAdapter, choice: int, *, close_after: bool = False) -> str:
+    """ショップ候補の購入から確認・完了までを1セットで実行する。"""
+    if choice not in (1, 2, 3):
+        raise ValueError("ショップ購入候補は1、2、3のいずれかを指定してください")
+    purchase = SHOP_PURCHASE_BUTTONS[choice - 1]
+    sequence = (purchase, "購入確認OK", "購入完了OK")
+    if close_after:
+        sequence += ("ショップ閉じる", "ショップ終了OK")
+    for label in sequence:
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return f"ショップ候補{choice}を購入しました"
+
+
+def purchase_shop_candidates_and_close(adapter: ScreenAdapter, choices: tuple[int, ...] = (1, 2, 3)) -> str:
+    """指定候補を購入し、最後の購入後にショップを閉じてOKを押す。"""
+    if not choices:
+        raise ValueError("購入候補がありません")
+    for index, choice in enumerate(choices):
+        purchase_shop_candidate(adapter, choice, close_after=index == len(choices) - 1)
+    return "ショップ購入完了。ショップを閉じました"
+
+
+def refresh_shop(adapter: ScreenAdapter) -> str:
+    """ショップの更新ボタンを押す。更新後の候補判断は別処理に戻す。"""
+    label = "ショップ更新"
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+        return f"画面確認待ち: {label}"
+    click_and_wait(adapter, label)
+    return "ショップを更新しました"
+
+
+@dataclass(frozen=True)
+class RouteStep:
+    label: str
+    user_check: bool = False
+
+
+FIXED_STEPS = (
+    RouteStep("クエスト"),
+    RouteStep("ラビリンス"),
+    RouteStep("出発"),
+    RouteStep("フォレスティエ"),
+    RouteStep("選択する"),
+    RouteStep("難易度確認"),
+    RouteStep("難易度10"),
+    RouteStep("出発する"),
+    RouteStep("マップ"),
+)
+
+# 出発までの固定操作。画面認識・ギルド選択を外部から注入できるため、
+# このシーンでは追加判断を行わず、登録済みのADBスクリプトだけを実行する。
+DEPARTURE_SCRIPT_STEPS = (
+    "クエスト", "ラビリンス", "出発", "フォレスティエ",
+    "選択する", "難易度確認", "難易度10", "出発する",
+)
+
+# ── 戦闘スクリプト／シーン ───────────────────────────────────────
+# 戦闘開始、マス移動、勝利、敗北を独立したシーンとして扱う。
+# ── シーン：戦闘開始 ─────────────────────────────────────────────
+# 編成判断後、このシーンだけを呼び出して戦闘開始まで進める。
+BATTLE_START_STEPS = (
+    RouteStep("EX装備"),
+    RouteStep("おまかせ装備"),
+    RouteStep("全て"),
+    RouteStep("物理防御貫通"),
+    RouteStep("OK"),
+    RouteStep("OK"),
+    RouteStep("装備確定"),
+    RouteStep("SET確認"),
+)
+
+# 固定座標UIでは、上記ラベル列をこの順で実行し、各操作後に2秒待機する。
+# EX装備は通常実行する。エリア3-5のエリアボスだけ手動例外とする。
+BATTLE_EQUIPMENT_SEQUENCE = (
+    "EX装備", "おまかせ装備", "物理防御貫通", "物理防御貫通ラジオ",
+    "OK", "OK", "装備確定", "キャンセル",
+)
+BATTLE_SCRIPT_SEQUENCE = BATTLE_EQUIPMENT_SEQUENCE + ("バトル開始",)
+BATTLE_SCRIPT_MANUAL_EX_SEQUENCE = ("バトル開始",)
+
+# 装備確定直後は、画面状態を判断せず必ずキャンセルして開始する。
+BATTLE_FALLBACK_SEQUENCE = ("キャンセル", "バトル開始")
+
+# シーン単位の一覧。実行側はシーン名で呼び出し、別フローを混在させない。
+SCRIPT_SCENES: Mapping[str, tuple[str, ...]] = {
+    f"{BATTLE_SCRIPT_NAME}/{BATTLE_START_SCENE}": BATTLE_SCRIPT_SEQUENCE,
+    f"{BATTLE_SCRIPT_NAME}/{BATTLE_TILE_SCENE}": ("マス選択", "移動先確認", "OK"),
+    f"{BATTLE_SCRIPT_NAME}/{BATTLE_VICTORY_SCENE}": ("次へ", "閉じる"),
+    f"{BATTLE_SCRIPT_NAME}/{BATTLE_DEFEAT_SCENE}": ("敗北", "ユーザー確認待ち"),
+    f"{BATTLE_SCRIPT_NAME}/{EXTREME_RELIC_SCENE}": ("遺物選択", "ユーザー確認待ち"),
+    f"{BATTLE_SCRIPT_NAME}/{EXTREME_CHARACTER_SCENE}": ("キャラ選択", "ユーザー確認待ち"),
+    f"{BATTLE_SCRIPT_NAME}/{SHOP_SCENE}": ("移動先確認OK",),
+}
+
+EXTREME_VICTORY_NEXT_SCENES = (EXTREME_RELIC_SCENE, EXTREME_CHARACTER_SCENE)
+VICTORY_RESULT_SCRIPT_SEQUENCE = ("次へ", "次へ")
+
+# 旧画面でのチェック確認は廃止し、スクリプト側で状態を揃える。
+LEGACY_BATTLE_STEPS = (
+    RouteStep("EX装備チェックON"),
+    RouteStep("全て"),
+)
+
+# 遺物マスは移動・確認をスクリプトで処理し、候補比較だけユーザーへ返す。
+RELIC_TILE_STEPS = (
+    RouteStep("遺物マス"),
+    RouteStep("移動先確認"),
+    RouteStep("OK"),
+    RouteStep("遺物選択", user_check=True),
+)
+
+TILE_STEPS = {
+    "通常": (
+        RouteStep("通常マス"),
+        RouteStep("移動先確認"),
+        RouteStep("OK"),
+        RouteStep("挑戦する"),
+    ),
+    "EX": (
+        RouteStep("EXマス"),
+        RouteStep("移動先確認"),
+        RouteStep("OK"),
+        RouteStep("挑戦する"),
+    ),
+    "コネクトサイン": (
+        RouteStep("コネクトサインマス"),
+        RouteStep("移動先確認"),
+        RouteStep("OK"),
+    ),
+    "イベント": (
+        RouteStep("イベントマス"),
+        RouteStep("移動先確認"),
+        RouteStep("OK"),
+        RouteStep("Extreme"),
+    ),
+    "ショップ": (
+        RouteStep("ショップマス"),
+        RouteStep("移動先確認"),
+        RouteStep("OK"),
+    ),
+    "ボス": (
+        RouteStep("ボスマス", user_check=True),
+        RouteStep("ボス確認", user_check=True),
+        RouteStep("移動先確認", user_check=True),
+        RouteStep("OK"),
+        RouteStep("挑戦する"),
+    ),
+}
+
+# 表記揺れを吸収し、Extreme到着時はEXマスと同じ自動フローで処理する。
+TILE_STEPS["Extreme"] = TILE_STEPS["EX"]
+
+
+# 「撤退する」は対象外ボス時の再抽選、および戦闘で勝利困難な場合の
+# 中断・やり直しに必要な正規フローとして許可。
+# 一方、ラビリンスを完全終了する帰還・終了操作は誤タップ防止のため常時禁止。
+FORBIDDEN = frozenset({
+    "帰還する", "帰還する（報酬あり）", "終了する", "選択終了",
+})
+
+# 判断ロジックは画面認識側へ返し、ここでは安全な定型処理だけを担当する。
+ATTRIBUTE_PRIORITY = ("光", "火", "水", "風", "闇")
+RELIC_PRIORITY = ("加速", "会心", "弱体", "強化", "守備")
+AREA1_REQUIRED_CONNECT_SIGNS = 2
+EXTREME_PRIORITY_AREAS = frozenset({"2-5"})
+SINGLE_TARGET_BOSSES = frozenset({"グレーターゴーレム", "グレートトゥンヌス"})
+CRITICAL_FOCUS_BOSSES = frozenset({"グレートトゥンヌス"})
+
+
+def rank_relic(stars: int, effect: str, value: int = 0, current: int = 0) -> tuple[int, int, int, int]:
+    """遺物候補の比較キー。星数、効果優先、能力値、所持数の順。"""
+    try:
+        effect_rank = -RELIC_PRIORITY.index(effect)
+    except ValueError:
+        effect_rank = -len(RELIC_PRIORITY)
+    return (stars, effect_rank, value, -current)
+
+
+def choose_relic(candidates: list[dict]) -> int:
+    """確認済み候補から最良候補の添字を返す。"""
+    if not candidates:
+        raise ValueError("遺物候補がありません")
+    return max(
+        range(len(candidates)),
+        key=lambda i: rank_relic(
+            int(candidates[i].get("stars", 0)),
+            str(candidates[i].get("effect", "")),
+            int(candidates[i].get("value", 0)),
+            int(candidates[i].get("current", 0)),
+        ),
+    )
+
+
+def run_fixed_route(adapter: ScreenAdapter, *, auto_select: bool = False) -> str:
+    """定型部分だけ進め、判断地点でユーザー確認へ返す。"""
+    for step in FIXED_STEPS:
+        if step.label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
+        if step.user_check:
+            if auto_select and step.label == "遺物選択":
+                break
+            return f"ユーザー確認待ち: {step.label}"
+        if not adapter.is_visible(step.label):
+            return f"画面確認待ち: {step.label}"
+        click_and_wait(adapter, step.label)
+    return "ユーザー確認待ち: ボス確認"
+
+
+def run_departure_script(
+    adapter: ScreenAdapter,
+    *,
+    guild_label: str = "フォレスティエ",
+    difficulty_label: str = "難易度10",
+) -> str:
+    """ホーム画面から出発完了までを固定順で実行する。"""
+    if guild_label not in {"フォレスティエ", "リトルリリカル", "自警団（カオン）"}:
+        raise ValueError(f"未承認のギルドです: {guild_label}")
+    if difficulty_label != "難易度10":
+        raise ValueError("現在は難易度10のみ対応しています")
+    steps = ("クエスト", "ラビリンス", "出発", guild_label, "選択する", "難易度確認", difficulty_label, "出発する")
+    for label in steps:
+        if label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作を拒否しました: {label}")
+        if not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return "出発完了"
+
+
+def choose_route_tile(tile: str) -> str:
+    """ユーザーが決めたマスだけをスクリプトへ渡す境界。"""
+    if tile in FORBIDDEN:
+        raise ValueError("帰還する／終了するは絶対に選択できません")
+    return tile
+
+
+def enter_route_without_choice(adapter: ScreenAdapter, tile_label: str) -> str:
+    """ルート選択肢がない場合の即時進入。座標確認や追加判断を挟まない。"""
+    if tile_label in FORBIDDEN:
+        raise ValueError("禁止された帰還操作です")
+    if not adapter.is_visible(tile_label):
+        return f"画面確認待ち: {tile_label}"
+    click_and_wait(adapter, tile_label)
+    return f"即時進入: {tile_label}"
+
+
+def prepare_and_start_battle(
+    adapter: ScreenAdapter,
+    composition_confirmations: tuple[bool, ...] | None = None,
+    *,
+    stage: str | None = None,
+    is_area_boss: bool = False,
+    composition_count: int | None = None,
+) -> str:
+    """戦闘開始シーン。判断を挟まず固定ボタン列で実行する。"""
+    if is_area_boss and composition_count is not None and composition_count not in {1, 2, 3}:
+        return "ユーザー確認待ち: エリアボス編成数不正"
+    required_count = composition_count if is_area_boss and composition_count is not None else (BATTLE_COMPOSITION_COUNT if is_area_boss else 1)
+    if composition_confirmations is None or len(composition_confirmations) != required_count:
+        return f"ユーザー確認待ち: {required_count}編成"
+    if not all(composition_confirmations):
+        return "ユーザー確認待ち: 未確認の編成"
+    sequence = (
+        BATTLE_SCRIPT_MANUAL_EX_SEQUENCE
+        if stage in EX_EQUIPMENT_MANUAL_EXCEPTION_STAGES
+        else BATTLE_SCRIPT_SEQUENCE
+    )
+    if isinstance(adapter, AdbScreenAdapter):
+        # 固定位置シーンは画面確認を挟まず、そのまま決められた順で送る。
+        for label in sequence:
+            if label in FORBIDDEN:
+                raise RuntimeError(f"禁止操作を拒否しました: {label}")
+            click_and_wait(adapter, label)
+        # 固定30秒待機は行わず、結果画面の検知側へ直ちに戻す。
+        return "戦闘中（終了まで待機）"
+    for label in sequence:
+        if label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作を拒否しました: {label}")
+        if not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return "戦闘中（終了まで待機）"
+
+
+def finish_victory(adapter: ScreenAdapter) -> str:
+    """勝利時だけ報酬画面を定型処理する。敗北はユーザー確認へ戻す。"""
+    if isinstance(adapter, AdbScreenAdapter):
+        # ADBでも「次へ」が実際に表示された場合だけ送信する。
+        # 可視性プローブなしでの座標直打ちは、別画面への暴発になるため拒否。
+        if adapter.visibility_probe is None:
+            return "安全停止: 勝利結果の表示確認器が未接続"
+        next_count = 0
+        while adapter.wait_until_visible("次へ", timeout_seconds=BATTLE_RESULT_TIMEOUT_SECONDS):
+            adapter.click("次へ")
+            next_count += 1
+            if next_count >= 6:
+                return "安全停止: 次へが6回続きました"
+            if not adapter.wait_until_hidden("次へ", timeout_seconds=FAST_TRANSITION_TIMEOUT_SECONDS):
+                return "安全停止: 次へが消えません"
+        while adapter.wait_until_visible("閉じる", timeout_seconds=FAST_TRANSITION_TIMEOUT_SECONDS):
+            adapter.click("閉じる")
+            if not adapter.wait_until_hidden("閉じる", timeout_seconds=FAST_TRANSITION_TIMEOUT_SECONDS):
+                return "安全停止: 閉じるが消えません"
+        return "勝利結果処理完了。次のシーンへ"
+    if not adapter.wait_until_visible("WIN", timeout_seconds=BATTLE_RESULT_TIMEOUT_SECONDS):
+        if adapter.is_visible("敗北"):
+            return finish_defeat(adapter)
+        return "画面確認待ち: 戦闘結果"
+
+    # マス種別で報酬画面数が変わるため、表示中の次へだけを処理する。
+    next_count = 0
+    while adapter.is_visible("次へ"):
+        click_and_wait(adapter, "次へ")
+        next_count += 1
+        if next_count >= 6:
+            return "安全停止: 次へが6回続きました"
+
+    # 報酬・加入ダイアログは閉じる。帰還ボタンは絶対に触らない。
+    while adapter.is_visible("閉じる"):
+        click_and_wait(adapter, "閉じる")
+    return "勝利処理完了。次のマス選択へ"
+
+
+def finish_defeat(adapter: ScreenAdapter) -> str:
+    """戦闘敗北シーン。自動で撤退せず、編成判断へ戻す。"""
+    if adapter.is_visible("敗北"):
+        return "ユーザー確認待ち: 敗北（編成変更が必要）"
+    return "画面確認待ち: 敗北"
+
+
+def close_optional_dialogs(adapter: ScreenAdapter) -> str:
+    """任意ダイアログだけを素早く処理し、対象がなければ即終了する。"""
+    closed = False
+    while adapter.is_visible("閉じる"):
+        click_and_wait(adapter, "閉じる")
+        closed = True
+    if closed:
+        return "任意ダイアログを閉じました"
+    return "追加操作なし。次の処理へ"
+
+
+def close_departure_bonus(adapter: ScreenAdapter) -> str:
+    """出発直後のボーナス窓を閉じる共通処理。
+
+    閉じるボタンが存在しない画面では操作せず、呼び出し側の画面判定へ戻す。
+    """
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible("閉じる"):
+        return "画面確認待ち: 出発ボーナス"
+    # ADBアダプターでは可視性プローブが任意のため、送信後の画面判定は
+    # 次の共通タイトル確認に委譲する。
+    click_and_wait(adapter, "閉じる", wait_hidden=not isinstance(adapter, AdbScreenAdapter))
+    return "出発ボーナスを閉じました"
+
+
+def close_dialog(adapter: ScreenAdapter, *, label: str = "閉じる") -> str:
+    """汎用の閉じるタスク。対象ボタンが確認できない場合は操作しない。"""
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+        return f"画面確認待ち: {label}"
+    click_and_wait(adapter, label, wait_hidden=not isinstance(adapter, AdbScreenAdapter))
+    return f"{label}を押しました"
+
+
+def select_guild(adapter: ScreenAdapter, guild: str = "フォレスティエ") -> str:
+    """承認済みギルドを選択し、確認画面まで進める共通タスク。"""
+    labels = {"フォレスティエ": ("ギルド_フォレスティエ", "ギルド選択確認")}
+    if guild not in labels:
+        raise ValueError(f"未承認のギルドです: {guild}")
+    for label in labels[guild]:
+        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+            return f"画面確認待ち: {label}"
+        click_and_wait(adapter, label)
+    return f"{guild}を選択して出発確認へ進みました"
+
+
+def tap_next(adapter: ScreenAdapter, *, label: str = "次へ") -> str:
+    """汎用の次へタスク。報酬・説明など複数画面で再利用する。"""
+    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
+        return f"画面確認待ち: {label}"
+    click_and_wait(adapter, label)
+    return f"{label}を押しました"
+
+
+def inspect_game_window_title(
+    read_title: Callable[[], str | None],
+    *,
+    allowed_titles: set[str] | frozenset[str] | None = None,
+) -> dict[str, str]:
+    """ゲーム内ウィンドウタイトルを共通取得し、未知タイトルを安全停止扱いにする。"""
+    title = read_title()
+    normalized = title.strip() if isinstance(title, str) else ""
+    if not normalized:
+        return {"screen_status": "unknown", "reason": "game_window_title_missing"}
+    result = {"window_title": normalized}
+    if allowed_titles is not None and normalized not in allowed_titles:
+        result.update({"screen_status": "unexpected", "reason": "game_window_title_unexpected"})
+    else:
+        result["screen_status"] = "known"
+    return result
+
+
+def enter_relic_tile(
+    adapter: ScreenAdapter,
+    *,
+    relic_candidates: list[dict] | None = None,
+    auto_select: bool = False,
+) -> str:
+    """遺物マスへ移動し、設定済み候補があれば決定論的に選択する。"""
+    for step in RELIC_TILE_STEPS:
+        if step.label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
+        if step.user_check:
+            if auto_select and step.label == "遺物選択":
+                break
+            return f"ユーザー確認待ち: {step.label}"
+        if not adapter.is_visible(step.label):
+            return f"画面確認待ち: {step.label}"
+        click_and_wait(adapter, step.label)
+    if auto_select:
+        if not relic_candidates:
+            return "ユーザー確認待ち: 遺物候補"
+        choice = choose_relic(relic_candidates) + 1
+        return select_candidate_and_close(adapter, choice)
+    return "ユーザー確認待ち: 遺物選択"
+
+
+def enter_tile(
+    adapter: ScreenAdapter,
+    tile_type: str,
+    *,
+    relic_candidates: list[dict] | None = None,
+    auto_select_relic: bool = False,
+) -> str:
+    """マス種別ごとの定型操作を即時実行する。未知のマスだけ停止する。"""
+    if tile_type == "遺物":
+        return enter_relic_tile(adapter, relic_candidates=relic_candidates, auto_select=auto_select_relic)
+    if tile_type not in TILE_STEPS:
+            return f"ユーザー確認待ち: 未知のマス種別 {tile_type}"
+    for step in TILE_STEPS[tile_type]:
+        if step.label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
+        if step.user_check:
+            return f"ユーザー確認待ち: {step.label}"
+        if not adapter.is_visible(step.label):
+            return f"画面確認待ち: {step.label}"
+        click_and_wait(adapter, step.label)
+    return f"{tile_type}マス処理完了"
+
+
+if __name__ == "__main__":
+    print("Computer Use の画面アダプターを接続して実行してください。")
+
+

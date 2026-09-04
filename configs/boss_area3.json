@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "boss_type": "area_boss",
+  "area": 3,
+  "bosses": [
+    {"order": 1, "name": "マダムエレクトラ"},
+    {"order": 2, "name": "フロストハウンド"},
+    {"order": 3, "name": "ダークガーゴイル"},
+    {"order": 4, "name": "グレーターゴーレム"},
+    {"order": 5, "name": "ベノムサラマンドラ"}
+  ]
+}
+
+

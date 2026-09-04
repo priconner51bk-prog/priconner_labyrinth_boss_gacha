@@ -1,0 +1,41 @@
+# Python / local development
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Local editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime output: may contain screenshots, OCR text, device information,
+# coordinates, and other environment-specific data.
+data/observations/
+**/data/observations/
+*.jsonl
+*.log
+*.png
+*.jpg
+*.jpeg
+
+# OCR/model artifacts: keep models outside the repository.
+*.onnx
+*.pdparams
+*.pdmodel
+*.bin
+models/
+model/
+
+# Local-only configuration and exports
+config.local.*
+configs/local/
+secrets/

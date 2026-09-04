@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0",
+  "config_name": "labyrinth_guild_starting_members",
+  "description": "黎明界ラビリンス攻略記事に記載された各ギルドの初期キャラ候補。",
+  "source": {
+    "url": "https://note.com/shiny_mint4564/n/ne9257b0d232e",
+    "title": "黎明界ラビリンス攻略（難易度10想定）",
+    "author": "インス",
+    "retrieved_at": "2026-09-03",
+    "latest_checked": true,
+    "note": "2026-08-18公開記事を再確認。美食殿は本文で水着シェフィ・★6ペコリーヌ・ニューイヤーペコリーヌが推奨されているため、現時点の採用候補として登録。画像内の未転記メンバーは推測せず、needs_image_verification=true とする。"
+  },
+  "selection_policy": {
+    "initial_selection_count": 3,
+    "objective": "high_score",
+    "initial_pick_basis": "専用SP所持キャラを優先",
+    "standard_assumptions": ["専用SPあり", "専用装備あり"],
+    "rare_priorities": ["CR15"],
+    "proposal_mode": true,
+    "attribute_priority": ["光", "闇", "火", "水", "風"],
+    "preferred_guilds": ["美食殿", "フォレスティエ"]
+  },
+  "guilds": {
+    "美食殿": {
+      "source_labels": ["水シェフィ", "6ペコ", "ニュペコ"],
+      "recommended_members": ["水着シェフィ", "★6ペコリーヌ", "ニューイヤーペコリーヌ"],
+      "notes": "記事本文で個人的なおすすめとして明示。",
+      "confidence": "text_explicit",
+      "needs_image_verification": false
+    },
+    "TW": {
+      "source_labels": ["6ヒヨリ", "6ユイ", "ニュイ", "アスヒヨ"],
+      "recommended_members": ["★6ヒヨリ", "★6ユイ"],
+      "optional_members": ["ニューイヤーユイ", "アストラルヒヨリ"],
+      "notes": "6ヒヨリ・6ユイ固定、残りは自由。6ユイ専用SPがなければニュイ。アスヒヨはエリア5ボスがゴブリンでない場合のみ候補。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "サレンディア": {
+      "source_labels": ["6アヤネ"],
+      "recommended_members": ["★6アヤネ"],
+      "notes": "6アヤネを強く推奨。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "ナイトメア": {
+      "source_labels": ["αクリス"],
+      "recommended_members": ["アルファクリスティーナ"],
+      "notes": "αクリスが最強との記載。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "ラビリンス": {
+      "source_labels": ["通常ラビ"],
+      "recommended_members": ["通常ラビリスタ"],
+      "notes": "通常ラビが遺物で確定入手可能。光属性で染める方針。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "カルミナ": {
+      "source_labels": ["ハロツム"],
+      "recommended_members": ["ハロウィンツムギ"],
+      "notes": "ハロツムを最優先。ゴブリンロードまたはゼーンを引かない前提なら光3人も候補。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "ディアボロス": {
+      "source_labels": ["ハロシノ"],
+      "recommended_members": ["ハロウィンシノブ"],
+      "notes": "ハロシノは未使用だが記載内容が強そうなので採用候補。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "牧場": {
+      "source_labels": ["ケツバトラー", "6リン"],
+      "recommended_members": [],
+      "avoid_members": ["ケツバトラー", "★6リン"],
+      "notes": "ケツバトラーと6リン以外は自由との記載。画像からの具体的な5人は未転記。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "財団": {
+      "source_labels": ["6ミフユ"],
+      "recommended_members": ["★6ミフユ"],
+      "notes": "6ミフユは確定枠。ショップで遺物を買うため資金を重視。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "キャラバン": {
+      "source_labels": ["6ミツキ"],
+      "recommended_members": ["★6ミツキ"],
+      "notes": "6ミツキが確定枠。闇属性で進める方針。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "リトリリ": {
+      "source_labels": ["ミソギ", "ゴシキョ"],
+      "recommended_members": ["ミソギ", "ミソギ", "ミソギ"],
+      "alternatives": ["ゴシキョ"],
+      "notes": "ミソギを最優先。水ミソギは必要に応じてゴシキョへ交換。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "自警団": {
+      "source_labels": ["光染めの3人", "6マホ"],
+      "recommended_members": [],
+      "optional_members": ["★6マホ"],
+      "notes": "光属性3人を推奨するが、本文では画像側に具体名があるため未転記。欠員時は6マホ。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "フォレスティエ": {
+      "source_labels": ["6ハツネ", "パオイ"],
+      "recommended_members": ["★6ハツネ", "パオイ"],
+      "notes": "6ハツネ・パオイを初手で取れる。残り3人はボスに応じて選択（画像側の具体名は未転記）。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    },
+    "ルーセント": {
+      "source_labels": ["6スズナ", "6イオ", "編スズナ", "クリイオ"],
+      "recommended_members": ["★6スズナ", "★6イオ"],
+      "optional_members": ["編成スズナ", "クリスマスイオ"],
+      "notes": "6スズナ・6イオ固定。編スズナよりクリイオが強いとの記載。",
+      "confidence": "text_explicit_partial",
+      "needs_image_verification": true
+    }
+  }
+}
+
+

@@ -1,0 +1,9 @@
+# Python 3.11 系を想定
+pytest>=8.0,<9.0
+pydantic>=2.7,<3.0
+opencv-python>=4.8,<5.0
+paddleocr>=3.0,<4.0
+
+# ADB スクリーンショットでは不要。デスクトップキャプチャを使う場合のみ必要。
+# mss>=9.0,<11.0
+# windows-capture>=1.4,<2.0

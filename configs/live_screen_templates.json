@@ -1,0 +1,69 @@
+{
+  "threshold": 0.95,
+  "screens": {
+    "labyrinth_top": {"image": "data/observations/live/current_screen.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "quest_menu": {"image": "data/observations/live/tap_02_depart_card.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "guild_select": {"image": "data/observations/live/run2_depart_screen.png", "left": 330, "top": 80, "right": 950, "bottom": 150},
+    "guild_confirm": {"image": "data/observations/live/current_after_failed_guild.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "bonus": {"image": "data/observations/live/run2_bonus.png", "left": 300, "top": 30, "right": 970, "bottom": 80},
+    "boss_map": {"image": "data/observations/live/after_character_join_close.png", "left": 400, "top": 15, "right": 880, "bottom": 90},
+    "boss_detail": {"image": "data/observations/live/task_boss_gacha_left_1.png", "left": 300, "top": 30, "right": 970, "bottom": 80},
+    "withdraw_confirm": {"image": "data/observations/live/current_after_withdraw_timeout.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "character_join": {"image": "data/observations/live/after_initial_character_selection.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "move_confirm": {"image": "data/observations/live/after_map_node_tap.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "event_confirm": {"image": "data/observations/live/task_move_confirm_event_0001_source.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "event_battle_choice": {"image": "data/observations/live/current_now.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "battle_tile_normal": {"image": "data/observations/live/after_move_confirm_ok.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "battle_party": {"image": "data/observations/live/after_battle_challenge.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "battle_party_ready": {"image": "data/observations/live/after_ex_conflict_cancel.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "ex_equipment": {"image": "data/observations/live/after_ex_equipment_open.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "ex_auto_dialog": {"image": "data/observations/live/after_ex_auto.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "ex_equipment_conflict": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "battle_victory": {"image": "data/observations/live/battle_result_poll_1.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "battle_reward": {"image": "data/observations/live/after_victory_next.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "character_bonus": {"image": "data/observations/live/current_second_bonus.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
+    "item_reward": {"image": "data/observations/live/current_map_after_event.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    ,"relic_choice": {"image": "data/observations/live/current_connect_screen.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    ,"shop": {"image": "data/observations/live/current_shop.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    ,"shop_purchase_confirm": {"image": "data/observations/live/current_after_shop_attempt.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    ,"shop_purchase_complete": {"image": "data/observations/live/current_shop_after_purchase.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    ,"shop_exit_confirm": {"image": "data/observations/live/current_after_shop_close.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+  },
+  "targets": {
+    "出発": {"image": "data/observations/live/current_screen.png", "left": 640, "top": 100, "right": 920, "bottom": 500},
+    "ラビリンス": {"image": "data/observations/live/tap_02_depart_card.png", "left": 1050, "top": 465, "right": 1255, "bottom": 615},
+    "フォレスティエ": {"image": "data/observations/live/run2_depart_screen.png", "left": 930, "top": 170, "right": 1250, "bottom": 630},
+    "ギルド選択確認": {"image": "data/observations/live/current_after_failed_guild.png", "left": 800, "top": 590, "right": 1080, "bottom": 690},
+    "マップ": {"image": "data/observations/live/current_after_bonus_timeout.png", "left": 0, "top": 600, "right": 180, "bottom": 719},
+    "左BOSS": {"image": "data/observations/live/after_character_join_close.png", "left": 620, "top": 10, "right": 720, "bottom": 90},
+    "右BOSS": {"image": "data/observations/live/after_character_join_close.png", "left": 770, "top": 10, "right": 880, "bottom": 90},
+    "閉じる": {"image": "data/observations/live/task_boss_gacha_left_1.png", "left": 500, "top": 540, "right": 780, "bottom": 700},
+    "出発ボーナス閉じる": {"image": "data/observations/live/run2_bonus.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
+    "キャラ加入閉じる": {"image": "data/observations/live/after_initial_character_selection.png", "left": 500, "top": 540, "right": 780, "bottom": 630},
+    "撤退する": {"image": "data/observations/live/after_character_join_close.png", "left": 800, "top": 610, "right": 1030, "bottom": 700},
+    "撤退確認OK": {"image": "data/observations/live/current_after_withdraw_timeout.png", "left": 650, "top": 440, "right": 950, "bottom": 550},
+    "移動先確認OK": {"image": "data/observations/live/after_map_node_tap.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
+    "イベント移動OK": {"image": "data/observations/live/task_move_confirm_event_0001_source.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
+    "イベント通常選択": {"image": "data/observations/live/current_now.png", "left": 340, "top": 540, "right": 570, "bottom": 650},
+    "挑戦する": {"image": "data/observations/live/after_move_confirm_ok.png", "left": 1000, "top": 570, "right": 1240, "bottom": 660},
+    "バトル開始": {"image": "data/observations/live/after_ex_conflict_cancel.png", "left": 1030, "top": 560, "right": 1240, "bottom": 660},
+    "EX装備": {"image": "data/observations/live/after_battle_party_cards.png", "left": 780, "top": 560, "right": 850, "bottom": 660},
+    "おまかせ装備": {"image": "data/observations/live/after_ex_equipment_open.png", "left": 650, "top": 590, "right": 930, "bottom": 680},
+    "EX自動設定OK": {"image": "data/observations/live/after_ex_auto.png", "left": 650, "top": 590, "right": 930, "bottom": 680},
+    "EX装備競合警告": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 380, "top": 540, "right": 900, "bottom": 600},
+    "EX競合キャンセル": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 50, "top": 590, "right": 340, "bottom": 680},
+    "勝利次へ": {"image": "data/observations/live/battle_result_poll_1.png", "left": 960, "top": 600, "right": 1260, "bottom": 690},
+    "報酬次へ": {"image": "data/observations/live/after_victory_next.png", "left": 960, "top": 600, "right": 1260, "bottom": 690},
+    "キャラボーナス選択": {"image": "data/observations/live/current_second_bonus.png", "left": 160, "top": 530, "right": 380, "bottom": 640},
+    "アイテム報酬閉じる": {"image": "data/observations/live/current_map_after_event.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
+    "遺物選択": {"image": "data/observations/live/current_connect_screen.png", "left": 160, "top": 560, "right": 380, "bottom": 670},
+    "ショップ購入1": {"image": "data/observations/live/current_shop.png", "left": 230, "top": 315, "right": 420, "bottom": 380},
+    "購入確認OK": {"image": "data/observations/live/current_after_shop_attempt.png", "left": 650, "top": 540, "right": 930, "bottom": 620},
+    "購入完了OK": {"image": "data/observations/live/current_shop_after_purchase.png", "left": 500, "top": 460, "right": 780, "bottom": 540},
+    "ショップ終了OK": {"image": "data/observations/live/current_after_shop_close.png", "left": 650, "top": 460, "right": 930, "bottom": 540},
+    "ショップ閉じる": {"image": "data/observations/live/current_shop_after_purchase2.png", "left": 950, "top": 600, "right": 1240, "bottom": 690},
+    "挑戦中": {"image": "data/observations/live/debug_after_labyrinth_entry.png", "left": 730, "top": 340, "right": 850, "bottom": 390}
+  }
+}
+
+

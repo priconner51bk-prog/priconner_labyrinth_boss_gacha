@@ -1,0 +1,57 @@
+{
+  "device": {
+    "width": 1280,
+    "height": 720,
+    "source": "bluestacks_client_area",
+    "ocr_engine": "PaddleOCR",
+    "ocr_language": "japan",
+    "ocr_language_alias": "jpn"
+  },
+  "regions": {
+    "initial_character_cards": [
+      {"normalized": {"x": 0.035, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 145, "y": 240}},
+      {"normalized": {"x": 0.148, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 290, "y": 240}},
+      {"normalized": {"x": 0.262, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 435, "y": 240}},
+      {"normalized": {"x": 0.375, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 580, "y": 240}},
+      {"normalized": {"x": 0.488, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 725, "y": 240}},
+      {"normalized": {"x": 0.602, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 870, "y": 240}},
+      {"normalized": {"x": 0.715, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 1015, "y": 240}},
+      {"normalized": {"x": 0.828, "y": 0.24, "width": 0.105, "height": 0.075}, "center": {"x": 1160, "y": 240}},
+      {"normalized": {"x": 0.035, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 145, "y": 395}},
+      {"normalized": {"x": 0.148, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 290, "y": 395}},
+      {"normalized": {"x": 0.262, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 435, "y": 395}},
+      {"normalized": {"x": 0.375, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 580, "y": 395}},
+      {"normalized": {"x": 0.488, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 725, "y": 395}},
+      {"normalized": {"x": 0.602, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 870, "y": 395}},
+      {"normalized": {"x": 0.715, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 1015, "y": 395}},
+      {"normalized": {"x": 0.828, "y": 0.445, "width": 0.105, "height": 0.09}, "center": {"x": 1160, "y": 395}},
+      {"normalized": {"x": 0.035, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 145, "y": 525}},
+      {"normalized": {"x": 0.148, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 290, "y": 525}},
+      {"normalized": {"x": 0.262, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 435, "y": 525}},
+      {"normalized": {"x": 0.375, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 580, "y": 525}},
+      {"normalized": {"x": 0.488, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 725, "y": 525}},
+      {"normalized": {"x": 0.602, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 870, "y": 525}},
+      {"normalized": {"x": 0.715, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 1015, "y": 525}},
+      {"normalized": {"x": 0.828, "y": 0.65, "width": 0.105, "height": 0.075}, "center": {"x": 1160, "y": 525}}
+    ],
+    "area_map_right_boss_button": {
+      "pixel_reference": {"left": 797, "top": 21, "right": 853, "bottom": 78},
+      "image_center": {"x": 825, "y": 50},
+      "adb_center": {"x": 825, "y": 50},
+      "image_to_adb_scale": {"x": 1.0, "y": 1.0},
+      "purpose": "エリアマップ上部タイムラインの右側BOSS詳細を開く位置"
+    },
+    "boss_detail_name": {
+      "normalized": {"x": 0.25, "y": 0.14, "width": 0.32, "height": 0.10},
+      "pixel_reference": {"left": 320, "top": 100, "right": 730, "bottom": 175},
+      "purpose": "モンスター詳細画面のボス名だけをOCRする",
+      "post_ocr_action": "close"
+    }
+  },
+  "normalization": {
+    "strip_leading_decoration": true,
+    "known_prefixes": ["グレーター", "ジャバ", "ダーク", "グレート"]
+  }
+}
+
+
