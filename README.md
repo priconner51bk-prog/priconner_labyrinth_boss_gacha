@@ -139,6 +139,12 @@ python main.py live --serial 127.0.0.1:5555 --default-models
 
 画面テンプレートの画像は実機キャプチャから準備します。これらにはゲーム画面が含まれるため、`data/observations/live/` にローカル保存し、GitHub には commit しません。テンプレートが未配置の場合、preflight は `screen_templates_unavailable` で安全停止します。
 
+ADB、解像度、テンプレートの不足をまとめて確認する場合は、次を実行します。
+
+```powershell
+python scripts/check_live_environment.py --serial 127.0.0.1:5555
+```
+
 ## 追加で確認しておく項目
 
 公開・運用を安定させるには、次の情報も README または `docs/` に残すと便利です。

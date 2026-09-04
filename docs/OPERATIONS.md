@@ -15,6 +15,14 @@ adb connect 127.0.0.1:5555
 adb devices
 ```
 
+実行前の一括診断:
+
+```powershell
+python scripts/check_live_environment.py --serial 127.0.0.1:5555
+```
+
+JSON の `ok` が `true` になるまで `--execute` は付けません。
+
 Windows、macOS、Linux のいずれでも ADB コマンドは同じです。BlueStacks の ADB ポートが既定値と異なる場合は、`adb connect <host>:<port>` と実行し、以後のコマンドおよび `main.py live` に同じ接続先を指定します。
 
 ```bash
