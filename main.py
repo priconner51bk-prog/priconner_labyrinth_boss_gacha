@@ -71,8 +71,6 @@ class BossGachaWindow:
         self.resume_screen = ttk.Combobox(form, values=("", *self.RESUME_SCREENS), state="readonly", width=30)
         self.resume_screen.set("")
         self.resume_screen.grid(row=9, column=1, sticky="ew", pady=3)
-        self.default_models = tk.BooleanVar(value=True)
-        ttk.Checkbutton(form, text="PaddleOCR 標準日本語モデル", variable=self.default_models).grid(row=10, column=1, sticky="w", pady=3)
         form.columnconfigure(1, weight=1)
 
         buttons = ttk.Frame(root, padding=(12, 0))
@@ -122,8 +120,8 @@ class BossGachaWindow:
             command += ["--area3-boss", name]
         for name in area5[1:]:
             command += ["--area5-boss", name]
-        if self.default_models.get():
-            command.append("--default-models")
+        # OCRはこのプロジェクトで評価済みのPP-OCRv4標準モデルに固定する。
+        command.append("--default-models")
         if resume:
             screen_label = self.resume_screen.get().strip()
             if not screen_label:
