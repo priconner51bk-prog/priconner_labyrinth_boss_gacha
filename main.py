@@ -17,6 +17,14 @@ from tkinter import messagebox, ttk
 ROOT = Path(__file__).resolve().parent
 
 
+def _config_names(filename: str) -> tuple[str, ...]:
+    try:
+        data = json.loads((ROOT / "configs" / filename).read_text(encoding="utf-8"))
+        return tuple(str(item["name"]) for item in data.get("bosses", []))
+    except (OSError, ValueError, KeyError, TypeError):
+        return ()
+
+
 def _run_mode(mode: str, forwarded: list[str]) -> int:
     module_name = {"debug": "scripts.debug_boss_gacha", "live": "scripts.task_boss_gacha_live"}[mode]
     module = importlib.import_module(module_name)
@@ -27,10 +35,16 @@ def _run_mode(mode: str, forwarded: list[str]) -> int:
 class BossGachaWindow:
     """実機処理を別プロセスで実行し、停止時は即時 kill する GUI。"""
 
-    RESUME_SCREENS = (
-        "guild_select", "guild_confirm", "bonus", "item_reward",
-        "initial_char", "boss_map", "boss_detail", "withdraw_confirm",
-    )
+    GUILDS = ("美食殿", "フォレスティエ")
+    DIFFICULTIES = tuple(str(value) for value in range(1, 11))
+    AREA3_BOSSES = _config_names("boss_area3.json")
+    AREA5_BOSSES = _config_names("boss_area5.json")
+    RESUME_SCREENS = {
+        "ギルド選択画面": "guild_select", "ギルド確認画面": "guild_confirm",
+        "出発ボーナス": "bonus", "アイテム報酬": "item_reward",
+        "初期キャラ画面": "initial_char", "ボス一覧マップ": "boss_map",
+        "ボス詳細画面": "boss_detail", "撤退確認画面": "withdraw_confirm",
+    }
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -43,16 +57,22 @@ class BossGachaWindow:
         form.pack(fill="x")
         self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
         self.passports = self._entry(form, "試行回数（1回1枚）", "100", 1)
-        self.guild = self._entry(form, "ギルド（任意）", "", 2)
-        self.difficulty = self._entry(form, "難易度", "10", 3)
-        self.area3 = self._entry(form, "エリア3 許容ボス", "ベノムサラマンドラ", 4)
-        self.area5 = self._entry(form, "エリア5 許容ボス", "ゴブリンロード", 5)
-        ttk.Label(form, text="再開画面").grid(row=6, column=0, sticky="w", pady=3)
+        ttk.Label(form, text="ギルド").grid(row=2, column=0, sticky="w", pady=3)
+        self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
+        self.guild.set("美食殿")
+        self.guild.grid(row=2, column=1, sticky="ew", pady=3)
+        ttk.Label(form, text="難易度").grid(row=3, column=0, sticky="w", pady=3)
+        self.difficulty = ttk.Combobox(form, values=self.DIFFICULTIES, state="readonly", width=30)
+        self.difficulty.set("10")
+        self.difficulty.grid(row=3, column=1, sticky="ew", pady=3)
+        self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
+        self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
+        ttk.Label(form, text="再開画面").grid(row=9, column=0, sticky="w", pady=3)
         self.resume_screen = ttk.Combobox(form, values=("", *self.RESUME_SCREENS), state="readonly", width=30)
         self.resume_screen.set("")
-        self.resume_screen.grid(row=6, column=1, sticky="ew", pady=3)
+        self.resume_screen.grid(row=9, column=1, sticky="ew", pady=3)
         self.default_models = tk.BooleanVar(value=True)
-        ttk.Checkbutton(form, text="PaddleOCR 標準日本語モデル", variable=self.default_models).grid(row=7, column=1, sticky="w", pady=3)
+        ttk.Checkbutton(form, text="PaddleOCR 標準日本語モデル", variable=self.default_models).grid(row=10, column=1, sticky="w", pady=3)
         form.columnconfigure(1, weight=1)
 
         buttons = ttk.Frame(root, padding=(12, 0))
@@ -78,23 +98,37 @@ class BossGachaWindow:
         entry.grid(row=row, column=1, sticky="ew", pady=3)
         return entry
 
+    def _boss_checks(self, parent: ttk.Frame, label: str, names: tuple[str, ...], row: int, default: str) -> dict[str, tk.BooleanVar]:
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="nw", pady=3)
+        frame = ttk.Frame(parent)
+        frame.grid(row=row, column=1, sticky="w", pady=3)
+        variables: dict[str, tk.BooleanVar] = {}
+        for index, name in enumerate(names):
+            variable = tk.BooleanVar(value=name == default)
+            variables[name] = variable
+            ttk.Checkbutton(frame, text=name, variable=variable).grid(row=index // 2, column=index % 2, sticky="w", padx=(0, 12), pady=1)
+        return variables
+
     def _command(self, *, resume: bool = False) -> list[str]:
         serial, passports = self.serial.get().strip(), self.passports.get().strip()
-        area3, area5 = self.area3.get().strip(), self.area5.get().strip()
+        area3 = [name for name, variable in self.area3_vars.items() if variable.get()]
+        area5 = [name for name, variable in self.area5_vars.items() if variable.get()]
         if not serial or not passports or not area3 or not area5:
             raise ValueError("ADB serial、パスポート枚数、エリア3/5のボス名を入力してください。")
         command = [sys.executable, "-u", str(ROOT / "scripts" / "task_boss_gacha_live.py"), "--execute",
                    "--serial", serial, "--passports", passports, "--difficulty", self.difficulty.get().strip() or "10",
-                   "--area3-boss", area3, "--area5-boss", area5]
-        if self.guild.get().strip():
-            command += ["--guild", self.guild.get().strip()]
+                   "--area3-boss", area3[0], "--area5-boss", area5[0], "--guild", self.guild.get().strip()]
+        for name in area3[1:]:
+            command += ["--area3-boss", name]
+        for name in area5[1:]:
+            command += ["--area5-boss", name]
         if self.default_models.get():
             command.append("--default-models")
         if resume:
-            screen = self.resume_screen.get().strip()
-            if not screen:
+            screen_label = self.resume_screen.get().strip()
+            if not screen_label:
                 raise ValueError("再開する画面を選択してください。")
-            command += ["--resume-screen", screen]
+            command += ["--resume-screen", self.RESUME_SCREENS.get(screen_label, screen_label)]
         return command
 
     def start(self) -> None:
