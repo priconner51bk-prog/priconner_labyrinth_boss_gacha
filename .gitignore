@@ -19,14 +19,20 @@ env/
 Thumbs.db
 
 # Runtime output: may contain screenshots, OCR text, device information,
-# coordinates, and other environment-specific data.
+# coordinates, and other environment-specific data. Keep the rule scoped to
+# the runtime observation directory so committed fixtures remain visible.
 data/observations/
 **/data/observations/
-*.jsonl
-*.log
-*.png
-*.jpg
-*.jpeg
+data/**/*.jsonl
+data/**/*.log
+
+# Generated local reports and temporary investigation files.
+artifacts/
+cloud_status.json
+_tmp_*.py
+
+# Windows reserved-name artifact occasionally created by interrupted tooling.
+CON
 
 # OCR/model artifacts: keep models outside the repository.
 *.onnx
