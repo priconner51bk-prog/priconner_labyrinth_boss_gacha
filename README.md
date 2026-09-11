@@ -220,6 +220,8 @@ python scripts/debug_boss_gacha.py --observations path\to\observations.json
 
 入力する項目は ADB serial、今回の試行回数、ギルド、エリア 3/5 の許容ボスです。ギルドはゲーム内カード表記で `configs/labyrinth_guild_starting_members.json` に登録された全候補から選択でき、既定値は美食殿です。難易度は現在対応している既定値に固定しています。既定の試行上限は1000回で、1試行につきパスポートを1枚消費します。開始前に BlueStacks の接続と対象画面を確認してください。
 
+実機処理は、ラビリンスの入口画面（新規挑戦または挑戦中の再開を選択できる画面）を表示した状態から開始してください。開始時に現在画面を再取得し、入口画面であることと新規／再開モードを確認してから次の操作へ進みます。入口画面を確認できない場合は、ADB入力を行わず安全停止します。ホーム画面から入口まで移動する場合は `python scripts/task_launch_labyrinth_live.py --serial 127.0.0.1:5555` を使用します。
+
 GUIで選択したADB serial、試行回数、ギルド、ボスのチェック状態は、次回起動時にローカル設定から復元します。この設定ファイルは端末固有情報を含むためGitHubへ公開しません。
 
 ```powershell
