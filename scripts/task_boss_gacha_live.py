@@ -239,8 +239,14 @@ def main() -> int:
                 point = template_point(frame)
                 if point is not None:
                     return point
-            except Exception:
-                pass
+            except Exception as exc:
+                print(json.dumps({
+                    "nonfatal_probe_error": {
+                        "phase": "guild_template_probe",
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                }, ensure_ascii=False), file=sys.stderr)
             path = live_dir / "task_boss_gacha_guild_select_template.png"
             # ギルドカードは横スクロール式。現在表示分を確認し、見つから
             # なければ画面ガード付きで最大4ページだけ送る。
@@ -282,8 +288,14 @@ def main() -> int:
                         point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
                         if point is not None:
                             return point
-                except Exception:
-                    pass
+                except Exception as exc:
+                    print(json.dumps({
+                        "nonfatal_probe_error": {
+                            "phase": "guild_scrollbar_probe",
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    }, ensure_ascii=False), file=sys.stderr)
             directions = scan_directions(
                 len(guild_order), current_index=current_index, target_index=target_index
             )
