@@ -318,7 +318,14 @@ def main() -> int:
                     point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
                     if point is not None:
                         return point
-                except Exception:
+                except Exception as exc:
+                    print(json.dumps({
+                        "nonfatal_probe_error": {
+                            "phase": "guild_page_template_probe",
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    }, ensure_ascii=False), file=sys.stderr)
                     return None
                 if page >= len(directions):
                     break
@@ -328,7 +335,14 @@ def main() -> int:
                                   healthcheck=True,
                                   screen_guard=lambda: observe_screen_stable() == "guild_select",
                                   task_name="guild_select_page_scan", timing_trace=trace)
-                except Exception:
+                except Exception as exc:
+                    print(json.dumps({
+                        "nonfatal_probe_error": {
+                            "phase": "guild_page_swipe",
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    }, ensure_ascii=False), file=sys.stderr)
                     return None
                 # スワイプ後の新しいページもテンプレートだけで判定する。
                 try:
