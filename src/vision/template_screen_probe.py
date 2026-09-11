@@ -77,7 +77,10 @@ class AdbTemplateScreenProbe:
             if rimg is not None:
                 self._template_cache[key] = rimg
         if rimg is None:
-            raise FileNotFoundError(region.image)
+            # 実機由来のスクリーンテンプレートは環境依存で、fresh clone
+            # 直後に全件が存在するとは限らない。欠落は一致なしとして
+            # 扱い、呼出し側の screen_not_recognized 安全停止へ委譲する。
+            return 0.0
         r = rimg[region.top:region.bottom, region.left:region.right]
         if c.shape != r.shape or c.size == 0:
             return 0.0
@@ -177,9 +180,6 @@ def load_template_probe_config(path: str | Path, capture):
 
     screen_regions = regions("screens")
     target_regions = regions("targets")
-    missing = sorted({str(region.image) for region in (*screen_regions.values(), *target_regions.values()) if not region.image.is_file()})
-    if missing:
-        raise FileNotFoundError(f"画面テンプレートが未配置です: {missing[0]}")
     return AdbTemplateScreenProbe(capture, screens=screen_regions, targets=target_regions,
                                   threshold=float(data.get("threshold", 0.82)))
 
