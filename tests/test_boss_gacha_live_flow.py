@@ -1,4 +1,5 @@
 from boss_gacha import GuardedLiveActions, BossGachaPhaseCoordinator
+from scripts.labyrinth_route import AdbScreenAdapter
 
 
 def test_guarded_action_checks_screen_and_target_before_tap():
@@ -45,3 +46,16 @@ def test_phase_coordinator_boss_read_starts_at_initial_character_screen():
         tap=lambda label: None,
     )
     assert BossGachaPhaseCoordinator(actions).guard_phase("read_boss_names") is True
+
+
+def test_adb_adapter_rejects_forbidden_return_controls_before_input():
+    adapter = AdbScreenAdapter(
+        coordinates={"帰還する": (1, 1), "終了する": (2, 2)},
+    )
+    for label in ("帰還する", "終了する"):
+        try:
+            adapter.click(label)
+        except RuntimeError as exc:
+            assert "禁止操作" in str(exc)
+        else:
+            raise AssertionError(f"forbidden control was not rejected: {label}")
