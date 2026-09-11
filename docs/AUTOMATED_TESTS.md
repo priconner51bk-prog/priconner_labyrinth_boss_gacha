@@ -21,4 +21,4 @@
 python -m pytest -q tests/test_live_selection_rules.py tests/test_boss_gacha_controller.py tests/test_boss_gacha_runner.py tests/test_boss_gacha_live_workflow.py tests/test_guild_selection.py
 ```
 
-実機試験を行う場合も、初回は `--passports 1` を使用します。自動テストはADB入力を発生させません。
+実機試験を行う場合も、初回は最大試行回数として `--passports 1` を使用します。ボスガチャは撤退運用のため、パスポートは消費しません。自動テストはADB入力を発生させません。
