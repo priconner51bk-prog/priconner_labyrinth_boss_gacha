@@ -514,6 +514,9 @@ def main() -> int:
         read_start.pop("screen", "initial_char"), target_left=None
     )
     result = runner.run()
+    if result.get("status") == "matched":
+        if not tap("boss_map", "帰還する") or not wait_screen("labyrinth_top"):
+            result = {"status": "safety_stop", "reason": "return_to_entry_failed", **result}
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("status") == "matched" else 2
 
