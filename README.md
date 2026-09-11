@@ -268,21 +268,15 @@ ADB、解像度、テンプレートの不足をまとめて確認する場合�
 python scripts/check_live_environment.py --serial 127.0.0.1:5555
 ```
 
-## 追加で確認しておく項目
+## 関連資料
 
-公開・運用を安定させるには、次の情報も README または `docs/` に残すと便利です。
+設定ファイルの役割、詳細な実機運用、テスト方法、安全上の注意、未完了タスクは次の資料を参照してください。
 
-- 対応 Python、OpenCV、Pydantic のバージョン
-- Windows・macOS・Linux ごとの BlueStacks 対応範囲と既知の制限
-- 画面解像度、DPI、ゲーム内表示倍率などの検証済み環境
-- `configs/` の各設定ファイルの役割と変更方法
-- 終了コードと JSON の `status` / `reason` の一覧
-- テンプレート画像の取得先、配置方法、ライセンス
-- ログ・スクリーンショットの個人情報確認と削除方法
-- 実機を操作しないテスト方法と、実機での最終確認手順
-- ライセンス、問い合わせ先、Issue で受け付けない内容
-
-未完了タスクと優先順位は [docs/TASKS.md](docs/TASKS.md) で管理します。
+- [実機運用手順](docs/OPERATIONS.md)
+- [開発手順](docs/DEVELOPMENT.md)
+- [自動テスト](docs/AUTOMATED_TESTS.md)
+- [セキュリティ注意](SECURITY.md)
+- [未完了タスク](docs/TASKS.md)
 
 ## セットアップとテスト
 
