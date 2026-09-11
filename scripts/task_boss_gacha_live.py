@@ -325,7 +325,7 @@ def main() -> int:
             observed = observe_screen_stable()
             screen_matches = observed == screen or (screen == "bonus" and observed == "item_reward")
             # ボス詳細の閉じるボタンは固定ROIで検証済み。まず軽量な
-            # テンプレート確認を行い、毎回のOCR初期往復を避ける。
+            # テンプレート確認を行い、不要な画面往復を避ける。
             if screen in {"boss_detail", "withdraw_confirm"} and screen_matches and probe.target_visible(probe_label):
                 break
             if dynamic_point is None:

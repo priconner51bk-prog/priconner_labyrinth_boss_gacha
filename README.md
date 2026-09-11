@@ -130,7 +130,7 @@ adb -s 127.0.0.1:5555 shell wm size
 adb -s 127.0.0.1:5555 shell wm density
 ```
 
-画面認識は座標・テンプレート・OCR 領域に依存するため、BlueStacks のウィンドウサイズ、DPI、ゲーム内表示倍率、縦横比を、検証済みの環境から変更しないでください。ADB 操作ではタイトルバーやウィンドウ枠を基準にせず、Android クライアント画面の解像度を取得して `1280x720` 基準の座標を自動補正します。画面比率が異なる場合は誤操作防止のため安全停止します。
+画面認識は座標とテンプレートに依存するため、BlueStacks のウィンドウサイズ、DPI、ゲーム内表示倍率、縦横比を、検証済みの環境から変更しないでください。ADB 操作ではタイトルバーやウィンドウ枠を基準にせず、Android クライアント画面の解像度を取得して `1280x720` 基準の座標を自動補正します。画面比率が異なる場合は誤操作防止のため安全停止します。
 
 ### 5. テンプレートを準備する
 
@@ -146,7 +146,7 @@ python main.py live --serial 127.0.0.1:5555
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
-python main.py live --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555
 ```
 
 画面 ID が取得でき、エラーや安全停止理由がないことを確認してから、[実機運用手順](docs/OPERATIONS.md) の実行手順へ進みます。
@@ -168,7 +168,7 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 - 画面解像度、DPI、ゲーム内表示倍率などの検証済み環境
 - `configs/` の各設定ファイルの役割と変更方法
 - 終了コードと JSON の `status` / `reason` の一覧
-- OCR モデルの取得先、配置方法、ライセンス
+- テンプレート画像の取得先、配置方法、ライセンス
 - ログ・スクリーンショットの個人情報確認と削除方法
 - 実機を操作しないテスト方法と、実機での最終確認手順
 - ライセンス、問い合わせ先、Issue で受け付けない内容
@@ -212,7 +212,7 @@ python main.py debug --observations path\to\observations.json
 python main.py live --serial 127.0.0.1:5555
 
 # 利用枚数と対象ボスを指定した実機実行
-python main.py live --execute --passports 10 --default-models `
+python main.py live --execute --passports 1 `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
 
@@ -223,14 +223,14 @@ python main.py live --execute --passports 10 --default-models `
 最初は必ず preflight（`--execute` なし）で画面認識だけを確認します。
 
 ```powershell
-python main.py live --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555
 ```
 
 入力を有効にする場合は、利用枚数、エリア 3/5 の許容ボスを明示します。
 
 ```powershell
 python main.py live `
-  --execute --passports 10 --default-models `
+  --execute --passports 1 `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
 
@@ -255,7 +255,7 @@ GitHub に push する前に、次のようなファイルをコミット対象�
 
 - BlueStacks のスクリーンショット、操作ログ、タイミングログ
 - ADB のシリアル番号、端末情報、個人環境が分かる設定やエクスポート
-- OCR モデルや大容量のモデルファイル
+- 大容量のモデルファイル
 - `.env`、API キー、トークン、パスワード、秘密鍵
 - Python の仮想環境、キャッシュ、IDE の個人設定
 

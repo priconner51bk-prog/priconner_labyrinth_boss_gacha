@@ -52,7 +52,6 @@ python main.py live --serial 127.0.0.1:5555
 ```powershell
 python main.py live `
   --execute --passports 10 --serial 127.0.0.1:5555 `
-  --default-models `
   --area3-boss "ベノムサラマンドラ" `
   --area5-boss "ゴブリンロード"
 ```
@@ -79,5 +78,5 @@ ADB、画面観測、許容ボス、テンプレート、画面遷移、対象�
 ## OS ごとの注意
 
 - Windows は BlueStacks と ADB の組み合わせを主な検証対象とします。
-- macOS / Linux は ADB クライアントの動作を確認できますが、BlueStacks 本体の提供状況、画面キャプチャ方式、GPU/OCR の対応は環境ごとに異なります。
-- OS が変わる場合は、ADB 接続だけでなく画面サイズ、DPI、OCR モデル、キャプチャ結果を preflight で再確認します。
+- macOS / Linux は ADB クライアントの動作を確認できますが、BlueStacks 本体の提供状況と画面キャプチャ方式は環境ごとに異なります。
+- OS が変わる場合は、ADB 接続だけでなく画面サイズ、DPI、テンプレート、キャプチャ結果を preflight で再確認します。
