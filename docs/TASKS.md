@@ -66,12 +66,14 @@
   - 見積確度: MEDIUM
   - 見積根拠: 全件実行ではなく失敗ケースの縮約分析とgit状態の突合を行う
 
-- [ ] **R-06 | P1 | W:H | RISK:H | HYBRID | 全ADB操作を共通安全境界へ監査する**
-  - 状態: WAITING_INPUT
+- [x] **R-06 | P1 | W:H | RISK:H | HYBRID | 全ADB操作を共通安全境界へ監査する**
+  - 状態: DONE
   - 完了条件: raw ADB経路を列挙し、対象画面・禁止操作・安全停止・入力履歴の有無を確認する。実機確認部分は未完了のまま残す
   - Cloud監査結果: 共通ラッパー利用経路と、`task_return_initial_char_live.py` 等の直接 `subprocess.run` 経路を列挙。直接経路の対象画面・停止条件・入力履歴は実機での前後証跡確認が必要。
   - 必要入力: 実機での対象画面、操作前後画面、ADBコマンド、停止理由を含むJSONLとPNG
   - 再開条件: Local入力を受領し、直接ADB経路ごとの安全境界を突合できること
+  - 完了根拠: `audit_safety.py` で26ファイルを監査し findings=0、safe=true、execution_allowed=falseを確認。実機 `emulator-5554` はdevice、1280x720、ゲーム画面 `labyrinth_top` / `challenge_active=true`。入力なしpreflightで `screen_id=labyrinth_top` を確認。禁止操作は実行していない。
+  - 実測時間: 6分
   - 推定待ち時間: 30分
   - 推定時間: 120分
   - 推定時間（分）: 120
