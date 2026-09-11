@@ -49,6 +49,8 @@ python main.py live --serial 127.0.0.1:5555
 
 既定の対象はエリア3の `ベノムサラマンドラ` とエリア5の `ゴブリンロード` です。各エリアには他の候補もあるため、候補一覧は `configs/boss_area3.json` と `configs/boss_area5.json` を確認してください。複数候補を許容する場合は、同じオプションを繰り返します。
 
+対象外のボスを検出した場合は撤退確認を行い、入口へ戻って次の試行に進みます。対象ボスを検出した場合は `matched` で終了します。対象ボス未検出のまま最大試行回数に達した場合は `max_attempts`、画面認識・遷移・ADBの確認に失敗した場合は `safety_stop` で終了します。いずれの場合も、終了後の画面を確認してから次の操作を行ってください。
+
 ```powershell
 python main.py live `
   --execute --passports 10 --serial 127.0.0.1:5555 `

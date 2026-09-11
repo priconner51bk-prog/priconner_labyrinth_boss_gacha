@@ -262,7 +262,7 @@ python main.py debug --observations path\to\observations.json
 # 実機 preflight（入力なし）
 python main.py live --serial 127.0.0.1:5555
 
-# 利用枚数と対象ボスを指定した実機実行
+# 最大試行回数と対象ボスを指定した実機実行
 python main.py live --execute --passports 1 `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
@@ -277,7 +277,7 @@ python main.py live --execute --passports 1 `
 python main.py live --serial 127.0.0.1:5555
 ```
 
-入力を有効にする場合は、利用枚数、エリア 3/5 の許容ボスを明示します。
+入力を有効にする場合は、最大試行回数、エリア 3/5 の許容ボスを明示します。
 
 ```powershell
 python main.py live `
@@ -285,7 +285,7 @@ python main.py live `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
 
-`--passports N` は、パスポート消費数ではなく、ボスガチャ処理の最大試行回数を指定する互換引数です。既定値は1000回で、試験時は `--passports 1` を指定します。ボスガチャは撤退するためパスポートを消費しません。結果は `matched`、`max_attempts`、`safety_stop` として区別されます。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
+対象外のボスを検出した場合は、対象ボスを誤って操作しないため撤退確認を行い、ラビリンス入口へ戻って次の試行に進みます。対象ボスを検出した場合は `matched` で処理を終了します。`--passports N` は、パスポート消費数ではなく、ボスガチャ処理の最大試行回数を指定する互換引数です。既定値は1000回で、試験時は `--passports 1` を指定します。ボスガチャは撤退するためパスポートを消費しません。対象ボス未検出のまま上限に達した場合は `max_attempts` で終了し、画面認識や遷移を確認できない場合は `safety_stop` で入力を停止します。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
 
 ## Git での変更手順
 
