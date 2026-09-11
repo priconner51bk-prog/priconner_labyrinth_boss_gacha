@@ -491,6 +491,8 @@ class AdbScreenAdapter:
         self._visibility_cache_ttl = 0.20
 
     def is_visible(self, label: str) -> bool:
+        if label in FORBIDDEN:
+            return False
         if label not in self.coordinates:
             return False
         # A coordinate entry is not evidence that the control is on screen.
@@ -510,6 +512,8 @@ class AdbScreenAdapter:
         return True
 
     def click(self, label: str) -> None:
+        if label in FORBIDDEN:
+            raise RuntimeError(f"禁止操作のためADB送信を停止: {label}")
         operation_started = time.monotonic()
         if self.screen_guard is not None:
             try:
