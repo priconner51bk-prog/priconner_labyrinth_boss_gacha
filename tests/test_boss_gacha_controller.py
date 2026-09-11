@@ -2,9 +2,9 @@ from boss_gacha import BossGachaController, BossGachaPolicy
 import pytest
 
 
-def test_policy_rejects_more_than_one_hundred_attempts():
-    with pytest.raises(ValueError, match="<= 100"):
-        BossGachaPolicy({"3": "対象"}, max_attempts=101)
+def test_policy_rejects_more_than_one_thousand_attempts():
+    with pytest.raises(ValueError, match="<= 1000"):
+        BossGachaPolicy({"3": "対象"}, max_attempts=1001)
 
 
 def test_controller_is_independent_and_retries_until_match():

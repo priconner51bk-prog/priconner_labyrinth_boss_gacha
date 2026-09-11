@@ -105,6 +105,11 @@ class AdbTemplateScreenProbe:
         for screen_id, label in (("guild_select", "フォレスティエ"), ("quest_menu", "ラビリンス"),
                                  ("labyrinth_top", "挑戦中"), ("labyrinth_top", "出発"),
                                  ("boss_map", "左BOSS"), ("boss_map", "右BOSS"),
+                                 # 報酬ダイアログは古い全画面テンプレートと
+                                 # 撤退確認背景が似るため、固有の閉じるボタンを
+                                 # 撤退確認より先に判定する。
+                                 ("bonus", "出発ボーナス閉じる"),
+                                 ("item_reward", "アイテム報酬閉じる"),
                                  # 終了確認は移動確認と背景が似るため先に判定する。
                                  ("withdraw_confirm", "撤退確認OK"),
                                  ("move_confirm", "移動先確認OK"),

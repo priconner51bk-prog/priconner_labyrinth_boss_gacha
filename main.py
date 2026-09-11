@@ -62,14 +62,14 @@ class BossGachaWindow:
         ttk.Label(root, text="対象ウィンドウ：BlueStacks（Android画面 1280x720）", padding=(12, 8)).pack(fill="x")
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
-        self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
-        self.passports = self._entry(form, "試行回数", "100", 1)
+        self.serial = self._entry(form, "ADB serial", "emulator-5554", 0)
+        self.passports = self._entry(form, "試行回数", "1000", 1)
         ttk.Label(form, text="ギルド").grid(row=2, column=0, sticky="w", pady=3)
         self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
         self.guild.set("美食殿")
         self.guild.grid(row=2, column=1, sticky="ew", pady=3)
         self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
-        self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
+        self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ラースドラゴン")
         self._load_gui_settings()
         form.columnconfigure(1, weight=1)
 
@@ -77,6 +77,8 @@ class BossGachaWindow:
         buttons.pack(fill="x")
         self.start_button = ttk.Button(buttons, text="開始", command=self.start)
         self.start_button.pack(side="left", padx=(0, 6))
+        self.adb_button = ttk.Button(buttons, text="ADB再起動", command=self.restart_adb)
+        self.adb_button.pack(side="left", padx=6)
         self.stop_button = ttk.Button(buttons, text="停止（即時）", command=self.stop, state="disabled")
         self.stop_button.pack(side="left", padx=6)
         self.resume_button = ttk.Button(buttons, text="再開（自動判定）", command=self.resume, state="disabled")
@@ -87,6 +89,7 @@ class BossGachaWindow:
         self.output = tk.Text(root, height=20, state="disabled", wrap="none")
         self.output.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         self.root.after(100, self._drain_output)
+        self.root.after(150, self.check_adb_connection)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
     def _entry(self, parent: ttk.Frame, label: str, value: str, row: int) -> ttk.Entry:
@@ -162,6 +165,63 @@ class BossGachaWindow:
 
     def resume(self) -> None:
         self._launch(resume=True)
+
+    def restart_adb(self) -> None:
+        """ADBサーバーを再起動し、指定serialの再接続結果を表示する。"""
+        if self.process and self.process.poll() is None:
+            messagebox.showwarning("実行中", "実行中はADBを再起動できません。")
+            return
+        serial = self.serial.get().strip()
+        self.adb_button.configure(state="disabled")
+        self.status.configure(text="ADB再起動中")
+
+        def worker() -> None:
+            try:
+                commands = (["adb", "kill-server"], ["adb", "start-server"], ["adb", "devices"])
+                outputs: list[str] = []
+                for command in commands:
+                    result = subprocess.run(command, capture_output=True, text=True,
+                                            encoding="utf-8", errors="replace", timeout=15)
+                    outputs.append(f"$ {' '.join(command)}\n{result.stdout}{result.stderr}".strip())
+                    if result.returncode != 0:
+                        raise RuntimeError(f"ADB command failed: {' '.join(command)}")
+                self.output_queue.put("[ADB再起動完了]\n" + "\n".join(outputs))
+                self.output_queue.put(f"[ADB対象] {serial or '(未指定)'}")
+            except Exception as exc:
+                self.output_queue.put(f"[ADB再起動失敗] {type(exc).__name__}: {exc}")
+            finally:
+                self.root.after(0, lambda: self.adb_button.configure(state="normal"))
+                self.root.after(0, lambda: self.status.configure(text="待機中"))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def check_adb_connection(self) -> None:
+        """GUI表示後に指定serialのADB接続を非同期確認する。"""
+        serial = self.serial.get().strip()
+        self.status.configure(text="ADB接続確認中")
+
+        def worker() -> None:
+            try:
+                result = subprocess.run(["adb", "devices"], capture_output=True, text=True,
+                                        encoding="utf-8", errors="replace", timeout=10)
+                devices = []
+                for line in result.stdout.splitlines():
+                    fields = line.split()
+                    if len(fields) >= 2 and fields[1] == "device":
+                        devices.append(fields[0])
+                if result.returncode == 0 and serial in devices:
+                    message = f"[ADB接続OK] {serial}"
+                    status = "ADB接続OK"
+                else:
+                    message = f"[ADB未接続] {serial or '(未指定)'}\n接続端末: {', '.join(devices) or 'なし'}"
+                    status = "ADB未接続"
+                self.output_queue.put(message)
+            except Exception as exc:
+                self.output_queue.put(f"[ADB確認失敗] {type(exc).__name__}: {exc}")
+                status = "ADB確認失敗"
+            self.root.after(0, lambda: self.status.configure(text=status))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _launch(self, *, resume: bool) -> None:
         if self.process and self.process.poll() is None:

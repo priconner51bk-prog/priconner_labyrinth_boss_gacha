@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -17,12 +18,11 @@ sys.path.insert(0, str(SUBPROJECT))
 from boss_gacha import (BossGachaController, BossGachaPhaseCoordinator,
                         BossGachaPolicy, LiveBossGachaWorkflow,
                         GuardedLiveActions)
+from boss_gacha.guild_selection import guild_button_point, scan_directions
 from decision.operation_log import OperationLogger
 from decision.timing import AdaptiveWaitPolicy
 from decision.timing_trace import TimingTrace
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.roi import NormalizedROI
 from vision.template_screen_probe import load_template_probe_config
 from scripts.labyrinth_route import (ADB_BUTTON_COORDINATES,
                                      run_adb_coordinate_sequence,
@@ -31,19 +31,8 @@ from scripts.labyrinth_route import (ADB_BUTTON_COORDINATES,
 from scripts.live_cli_utils import screen_error_message
 
 
-def _boss_names() -> dict[str, set[str]]:
-    """Return canonical boss names and OCR aliases grouped by canonical name."""
-    names: dict[str, set[str]] = {}
-    for filename in ("boss_area3.json", "boss_area5.json"):
-        data = json.loads((ROOT / "configs" / filename).read_text(encoding="utf-8"))
-        for item in data.get("bosses", []):
-            canonical = str(item["name"])
-            names[canonical] = {canonical, *(str(alias) for alias in item.get("ocr_aliases", []))}
-    return names
-
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description="画面ガード付きボスガチャ（最大100回）")
+    parser = argparse.ArgumentParser(description="画面ガード付きボスガチャ（最大1000回）")
     parser.add_argument("--execute", action="store_true", help="ADB入力を有効化（省略時はpreflightのみ）")
     parser.add_argument("--passports", type=int, default=100, help="今回許可する試行回数（1試行につき1枚消費、既定値:100）")
     parser.add_argument("--serial", default="127.0.0.1:5555")
@@ -56,7 +45,7 @@ def main() -> int:
                         help="エリア5で許容するボス名。複数指定可")
     parser.add_argument("--det-model", type=Path)
     parser.add_argument("--rec-model", type=Path)
-    parser.add_argument("--default-models", action="store_true", help="PaddleOCR標準日本語モデルを使用")
+    parser.add_argument("--default-models", action="store_true", help="互換引数（現在は無視。テンプレート判定を使用）")
     args = parser.parse_args()
     if args.passports < 0:
         parser.error("--passports must be non-negative")
@@ -64,6 +53,33 @@ def main() -> int:
     live_dir = ROOT / "data" / "observations" / "live"
     trace = TimingTrace(live_dir / "boss_gacha_timing.jsonl", task="task_boss_gacha")
     capture = AdbScreenCapture(serial=args.serial, timing_trace=trace)
+    screenshot_index = {"value": 0}
+    last_observed_screen = {"value": None}
+    screenshot_hashes: set[str] = set()
+    for existing in live_dir.glob("task_boss_gacha_screen_*.png"):
+        try:
+            screenshot_hashes.add(hashlib.sha256(existing.read_bytes()).hexdigest())
+        except OSError:
+            pass
+
+    def save_gacha_screenshot(label: str) -> Path | None:
+        """ガチャ実行中の画面を証跡として保存する。"""
+        screenshot_index["value"] += 1
+        safe_label = re.sub(r"[^0-9A-Za-z一-龯ぁ-んァ-ヶ_-]+", "_", label).strip("_") or "screen"
+        path = live_dir / f"task_boss_gacha_screen_{screenshot_index['value']:04d}_{safe_label}.png"
+        pending = live_dir / f".task_boss_gacha_pending_{screenshot_index['value']:04d}.png"
+        try:
+            capture.capture(pending)
+            digest = hashlib.sha256(pending.read_bytes()).hexdigest()
+            if digest in screenshot_hashes:
+                pending.unlink(missing_ok=True)
+                return None
+            screenshot_hashes.add(digest)
+            pending.replace(path)
+            return path
+        except Exception:
+            pending.unlink(missing_ok=True)
+            return None
     try:
         probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
@@ -85,6 +101,9 @@ def main() -> int:
             except Exception:
                 observed = None
             if observed:
+                if last_observed_screen["value"] != observed:
+                    save_gacha_screenshot(f"observed_{observed}")
+                    last_observed_screen["value"] = observed
                 return observed
             if attempt < 29:
                 time.sleep(0.25)
@@ -142,14 +161,6 @@ def main() -> int:
             print(json.dumps({"status": "safety_stop", "reason": f"challenge_state_observation_failed:{type(exc).__name__}"}, ensure_ascii=False))
             return 2
 
-    if args.default_models:
-        ocr = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn")
-    elif args.det_model and args.rec_model:
-        ocr = PaddleOCRAdapter(str(args.det_model), str(args.rec_model), device="cpu", language="jpn")
-    else:
-        print(json.dumps({"status": "safety_stop", "reason": "ocr_model_not_configured"}, ensure_ascii=False))
-        return 2
-
     operation_log = OperationLogger(live_dir / "boss_gacha_operations.jsonl", live_dir / "boss_gacha_operations.md")
     policy = BossGachaPolicy.from_json(ROOT / "configs" / "labyrinth_target_policy.json")
     policy = BossGachaPolicy(
@@ -157,9 +168,6 @@ def main() -> int:
         allowed_bosses={"3": tuple(args.area3_boss), "5": tuple(args.area5_boss)},
         max_attempts=policy.max_attempts,
     )
-    names = _boss_names()
-    roi_data = json.loads((ROOT / "configs" / "labyrinth_ocr_regions.json").read_text(encoding="utf-8"))
-    roi = NormalizedROI.model_validate(roi_data["regions"]["boss_detail_name"]["normalized"])
     frame_index = {"value": 0}
 
     def wait_screen(expected: str) -> bool:
@@ -184,31 +192,101 @@ def main() -> int:
             """
             if screen != "guild_select":
                 return None
-            wanted = re.sub(r"\s+", "", label)
-            path = live_dir / "task_boss_gacha_guild_select_ocr.png"
+            # 収集済みカードをテンプレート照合する。テンプレートは
+            # スクロール後にも毎ページ再評価する必要があるため、OCR走査の
+            # 外側ではなく、この関数の各呼び出しで現在画面を取得する。
+            # source画像は同一レイアウトの4カードを含むため、対象ごとに
+            # カード矩形を切り出して比較する。
+            def template_point(frame):
+                import cv2
+                template_specs = {
+                    "美食殿": ("guild_mishoku_card.png", None),
+                    "トゥインクルウィッシュ": ("guild_twinkle_card.png", "guild_confirm_mishoku.png"),
+                    "サレンディア救護院": ("guild_salendia_card.png", "guild_confirm_mishoku.png"),
+                }
+                filename, source_name = template_specs.get(label, (None, None))
+                template_path = ROOT / "data" / "template_migration" / "templates" / (filename or "")
+                template = cv2.imread(str(template_path), cv2.IMREAD_COLOR) if filename and template_path.exists() else None
+                if template is None and source_name:
+                    source = cv2.imread(str(ROOT / "data" / "template_migration" / "source" / source_name), cv2.IMREAD_COLOR)
+                    if source is not None:
+                        crops = {"トゥインクルウィッシュ": (390, 175, 710, 635), "サレンディア救護院": (750, 175, 1070, 635)}
+                        x1, y1, x2, y2 = crops[label]
+                        template = source[y1:y2, x1:x2]
+                if template is None or frame is None or frame.shape[0] < template.shape[0] or frame.shape[1] < template.shape[1]:
+                    return None
+                result = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
+                _, score, _, location = cv2.minMaxLoc(result)
+                if score >= 0.82:
+                    x, y = location
+                    return (x + template.shape[1] // 2, y + template.shape[0] - 70)
+                return None
+
+            try:
+                import cv2
+                frame_path = live_dir / "task_boss_gacha_guild_select_template.png"
+                capture.capture(frame_path)
+                frame = cv2.imread(str(frame_path), cv2.IMREAD_COLOR)
+                point = template_point(frame)
+                if point is not None:
+                    return point
+            except Exception:
+                pass
+            path = live_dir / "task_boss_gacha_guild_select_template.png"
             # ギルドカードは横スクロール式。現在表示分を確認し、見つから
             # なければ画面ガード付きで最大4ページだけ送る。
             # 前回の試行位置を問わず、左右両方向を走査する。ページャは
             # 端で止まるため、反対向きも含めて最大9回で全ギルドを覆う。
-            directions = [((250, 400), (1100, 400))] * 8 + [((1100, 400), (250, 400))] * 8
+            guild_order = list(guild_data.get("guilds", {}).keys())
+            settings_path = ROOT / ".local_gui_settings.json"
+            try:
+                current_guild = json.loads(settings_path.read_text(encoding="utf-8")).get("guild")
+            except (OSError, ValueError, TypeError):
+                current_guild = None
+            current_index = guild_order.index(current_guild) if current_guild in guild_order else 0
+            target_index = guild_order.index(label) if label in guild_order else None
+            # 保存設定と実機のカード位置がずれていても、カード列の順序は
+            # 固定なので、まず下部スクロールバーを目的位置へ合わせる。
+            # 既に対象カードが見えている場合は上のテンプレート判定で戻るため、
+            # 不要なスクロールは発生しない。
+            if target_index is not None and guild_order:
+                try:
+                    # 画面には約3枚ずつ表示されるため、スクロールバーの
+                    # 位置はカード番号ではなく表示ページ番号に対応させる。
+                    page_index = target_index // 3
+                    max_page_index = max(1, (len(guild_order) - 1) // 3)
+                    target_scroll_x = 25 + round(1230 * page_index / max_page_index)
+                    run_adb_swipe(
+                        (1100, 658), (target_scroll_x, 658), serial=args.serial,
+                        healthcheck=True,
+                        screen_guard=lambda: observe_screen_stable() == "guild_select",
+                        task_name="guild_select_scrollbar_position",
+                        timing_trace=trace,
+                    )
+                    time.sleep(0.45)
+                    import cv2
+                    capture.capture(path)
+                    point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
+                    if point is not None:
+                        return point
+                except Exception:
+                    pass
+            directions = scan_directions(
+                len(guild_order), current_index=current_index, target_index=target_index
+            )
+            # 保存位置と実機位置がずれている場合に限り、全体走査へフォールバックする。
+            # 通常は上の最短経路だけで済み、無限走査は行わない。
+            fallback = scan_directions(len(guild_order))
+            directions.extend(fallback)
             for page in range(len(directions) + 1):
                 try:
                     capture.capture(path)
-                    lines = ocr.recognize(str(path))
+                    import cv2
+                    point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
+                    if point is not None:
+                        return point
                 except Exception:
                     return None
-                for line in lines:
-                    text = re.sub(r"\s+", "", line.text)
-                    if line.confidence < 0.55 or not line.bbox or wanted not in text:
-                        continue
-                    left, top, right, bottom = line.bbox
-                    if right <= left or bottom <= top:
-                        continue
-                    # OCRはギルド名の文字位置を返す。入力先は同じカードの
-                    # 下部にある「選択する」ボタンなので、文字の下へ固定量
-                    # だけ移し、カード外への誤入力を範囲で拒否する。
-                    button_y = max(520, min(600, bottom + 75))
-                    return ((left + right) // 2, button_y)
                 if page >= len(directions):
                     break
                 try:
@@ -219,6 +297,18 @@ def main() -> int:
                                   task_name="guild_select_page_scan", timing_trace=trace)
                 except Exception:
                     return None
+                # スワイプ後の新しいページもテンプレートだけで判定する。
+                try:
+                    import cv2
+                    # 画面IDが戻ってもカード描画だけ遅れる場合があるため、
+                    # 直後の一枚を判定せず短時間だけ描画を待つ。
+                    time.sleep(0.45)
+                    capture.capture(path)
+                    point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
+                    if point is not None:
+                        return point
+                except Exception:
+                    pass
             return None
 
         # 画面IDの切替直後は背景テンプレートだけ先に一致することがある。
@@ -233,41 +323,8 @@ def main() -> int:
         elif label == "閉じる" and screen == "item_reward":
             probe_label = "アイテム報酬閉じる"
         def dynamic_close_point() -> tuple[int, int] | None:
-            if label != "閉じる" or screen not in {"boss_detail", "bonus", "item_reward"}:
-                return None
-            path = live_dir / "task_boss_gacha_close_ocr.png"
-            try:
-                capture.capture(path)
-                lines = ocr.recognize(str(path))
-            except Exception:
-                return None
-            for line in lines:
-                if line.confidence >= 0.70 and line.bbox and "閉じる" in re.sub(r"\s+", "", line.text):
-                    left, top, right, bottom = line.bbox
-                    if 400 <= (left + right) // 2 <= 850 and 500 <= (top + bottom) // 2 <= 700:
-                        return ((left + right) // 2, (top + bottom) // 2)
             return None
         def dynamic_withdraw_ok_point() -> tuple[int, int] | None:
-            if label != "撤退確認OK" or screen != "withdraw_confirm":
-                return None
-            path = live_dir / "task_boss_gacha_withdraw_confirm_ocr.png"
-            try:
-                capture.capture(path)
-                lines = ocr.recognize(str(path))
-            except Exception:
-                return None
-            text = "".join(re.sub(r"\s+", "", line.text) for line in lines if line.confidence >= 0.60)
-            if "終了確認" not in text:
-                return None
-            for line in lines:
-                if line.confidence < 0.60 or not line.bbox:
-                    continue
-                if re.sub(r"\s+", "", line.text).upper() not in {"OK", "ＯＫ"}:
-                    continue
-                left, top, right, bottom = line.bbox
-                point = ((left + right) // 2, (top + bottom) // 2)
-                if 620 <= point[0] <= 930 and 430 <= point[1] <= 560:
-                    return point
             return None
         while time.monotonic() < deadline:
             observed = observe_screen_stable()
@@ -307,6 +364,15 @@ def main() -> int:
             operation_log.record(task="task_boss_gacha", purpose=label, screen_before=screen,
                                  action="ADB tap", coordinate=point, adb_serial=args.serial, outcome="sent",
                                  duration_ms=(time.perf_counter() - started) * 1000)
+            save_gacha_screenshot(f"after_{label}")
+            if screen == "guild_select":
+                settings_path = ROOT / ".local_gui_settings.json"
+                try:
+                    settings = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
+                    settings["guild"] = label
+                    settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                except (OSError, ValueError, TypeError):
+                    pass
             return True
         except Exception:
             return False
@@ -316,48 +382,45 @@ def main() -> int:
         frame_index["value"] += 1
         path = live_dir / f"task_boss_gacha_{side}_{frame_index['value']}.png"
         capture.capture(path)
-        # 実機のボス名ROIは高さが約72pxしかないため、そのままでは
-        # PP-OCRv4の検出器が文字列を落とすことがある。ROIだけを2倍に
-        # 拡大してOCRし、画面全体のノイズは読み込ませない。
         import cv2
         image = cv2.imread(str(path))
         if image is None:
             raise RuntimeError("ボス名画像を読み込めません")
-        cropped = roi.crop_array(image)
-        # ROIは維持し、文字の上下左右に少量の境界を追加してから二値化する。
-        # 文字がROI端に接すると、認識器が1文字だけを拾うことがある。
-        padded = cv2.copyMakeBorder(
-            cropped, 6, 6, 8, 8, cv2.BORDER_CONSTANT, value=(255, 255, 255)
-        )
-        gray = cv2.cvtColor(padded, cv2.COLOR_BGR2GRAY)
-        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        enlarged = cv2.resize(binary, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
-        ocr_path = live_dir / f"task_boss_gacha_{side}_{frame_index['value']}_name_ocr.png"
-        if not cv2.imwrite(str(ocr_path), enlarged):
-            raise RuntimeError("ボス名OCR画像を保存できません")
-        lines = ocr.recognize(str(ocr_path))
-        trace.record("ocr_boss_name", (time.perf_counter() - started) * 1000, side=side)
-        text = re.sub(r"\s+", "", "".join(line.text for line in lines))
-        for canonical, variants in names.items():
-            normalized_variants = {re.sub(r"\s+", "", variant) for variant in variants}
-            if any(variant in text or text in variant for variant in normalized_variants):
-                return canonical
-        observed = [(str(line.text), round(float(line.confidence), 3)) for line in lines]
+        # ボス名はOCRを使わず、収集済み肖像テンプレートだけで判定する。
+        portrait_dir = ROOT / "data" / "template_migration" / "templates" / "boss_portraits"
+        best_name, best_score = None, 0.0
+        search = image[145:285, 350:510]
+        for template_path in portrait_dir.glob("*.png"):
+            # OpenCVのWindows版は日本語ファイル名を直接開けないため、
+            # ASCII名へコピー済みのテンプレートだけを対象にする。
+            if not template_path.name.isascii():
+                continue
+            template = cv2.imread(str(template_path), cv2.IMREAD_COLOR)
+            if template is None or search.shape[0] < template.shape[0] or search.shape[1] < template.shape[1]:
+                continue
+            result = cv2.matchTemplate(search, template, cv2.TM_CCOEFF_NORMED)
+            _, score, _, _ = cv2.minMaxLoc(result)
+            if score > best_score:
+                best_name, best_score = template_path.stem, float(score)
+        aliases = {
+            "venom_salamandra": "ベノムサラマンドラ",
+            "madam_electra": "マダムエレクトラ",
+            "goblin_lord": "ゴブリンロード",
+            "ultima_guardian": "アルティマガーディアン",
+            "ultima_guardian_jp": "アルティマガーディアン",
+            "chimera": "キマイラ",
+        }
+        if best_name in aliases and best_score >= 0.82:
+            trace.record("template_boss_name", (time.perf_counter() - started) * 1000,
+                         side=side, score=best_score, name=best_name)
+            return aliases[best_name]
         raise RuntimeError(
-            f"boss_name_unrecognized:{side}:ocr_text={text!r}:ocr_lines={observed!r}:image={ocr_path}"
+            f"boss_name_template_unrecognized:{side}:best={best_name!r}:score={best_score:.3f}:image={path}"
         )
 
     def verify_guild(expected: str) -> bool:
-        """出発ボーナスのギルド表記を確認してから次画面へ進む。"""
-        path = live_dir / "task_boss_gacha_guild_verify.png"
-        try:
-            capture.capture(path)
-            lines = ocr.recognize(str(path))
-        except Exception:
-            return False
-        expected_text = re.sub(r"\s+", "", expected)
-        observed = re.sub(r"\s+", "", "".join(line.text for line in lines if line.confidence >= 0.55))
-        return expected_text in observed
+        """テンプレートだけでギルド確認画面を検証する。"""
+        return probe.target_visible("ギルド選択確認")
 
     # 開始・再開とも現在画面を自動判定する。画面が曖昧な場合は入力せず停止する。
     start_screen = screen_id

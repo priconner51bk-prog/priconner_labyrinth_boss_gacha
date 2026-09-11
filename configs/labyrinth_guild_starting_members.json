@@ -17,6 +17,9 @@
     "standard_assumptions": ["専用SPあり", "専用装備あり"],
     "rare_priorities": ["CR15"],
     "proposal_mode": true,
+    "scroll_behavior": "previous_selection_origin",
+    "order_source": "guilds_insertion_order",
+    "scroll_step": "one_card_per_swipe",
     "attribute_priority": ["光", "闇", "火", "水", "風"],
     "preferred_guilds": ["美食殿", "フォレスティエ"]
   },
