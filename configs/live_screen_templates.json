@@ -58,6 +58,8 @@
     "アイテム報酬閉じる": {"image": "data/observations/live/current_map_after_event.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
     "遺物選択": {"image": "data/observations/live/current_connect_screen.png", "left": 160, "top": 560, "right": 380, "bottom": 670},
     "ショップ購入1": {"image": "data/observations/live/current_shop.png", "left": 230, "top": 315, "right": 420, "bottom": 380},
+    "ショップ購入2": {"image": "data/observations/live/current_shop.png", "left": 625, "top": 315, "right": 815, "bottom": 380},
+    "ショップ購入3": {"image": "data/observations/live/current_shop.png", "left": 1015, "top": 315, "right": 1205, "bottom": 380},
     "購入確認OK": {"image": "data/observations/live/current_after_shop_attempt.png", "left": 650, "top": 540, "right": 930, "bottom": 620},
     "購入完了OK": {"image": "data/observations/live/current_shop_after_purchase.png", "left": 500, "top": 460, "right": 780, "bottom": 540},
     "ショップ終了OK": {"image": "data/observations/live/current_after_shop_close.png", "left": 650, "top": 460, "right": 930, "bottom": 540},

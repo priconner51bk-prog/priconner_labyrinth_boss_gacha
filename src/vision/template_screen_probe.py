@@ -38,7 +38,7 @@ class AdbTemplateScreenProbe:
     _SCREEN_TARGETS = {
         "labyrinth_top": {"出発", "挑戦中"}, "quest_menu": {"ラビリンス"},
         "guild_select": {"フォレスティエ", "美食殿"}, "guild_confirm": {"ギルド選択確認"}, "bonus": {"閉じる", "出発ボーナス閉じる"},
-        "boss_detail": {"閉じる"}, "character_join": {"キャラ加入閉じる"},
+        "boss_detail": {"閉じる"}, "character_join": {"閉じる", "キャラ加入閉じる"},
         "move_confirm": {"移動先確認OK"},
         "event_confirm": {"イベント移動OK"},
         "event_battle_choice": {"イベント通常選択"},

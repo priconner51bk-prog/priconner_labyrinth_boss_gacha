@@ -38,4 +38,14 @@ python main.py live --serial 127.0.0.1:5555
 python scripts/task_launch_labyrinth_live.py --serial 127.0.0.1:5555
 ```
 
+このコマンドはホーム画面から入口へ移動する補助機能で、PaddleOCRサービスを使用します。入口画面を手動で表示できる場合は、通常の `main.py live` 実行だけでよく、OCRの追加準備は不要です。
+
+GUIを使う場合:
+
+```powershell
+python main.py
+```
+
+GUIのADB serial初期値は `127.0.0.1:5555` です。
+
 ゲーム、BlueStacks、Windows、Python依存パッケージを更新した場合は、ADB、解像度、DPI、テンプレート認識を再確認します。スリープ・画面ロック・自動再起動を避け、通知やポップアップは実行前に処理してください。

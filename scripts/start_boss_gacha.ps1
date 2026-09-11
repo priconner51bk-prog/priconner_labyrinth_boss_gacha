@@ -2,7 +2,7 @@
 param(
     [string]$BlueStacksPath,
     [string]$BlueStacksArgs = "--instance Nougat32",
-    [string]$AdbPath = "C:\platform-tools\adb.exe",
+    [string]$AdbPath,
     [string]$Serial = "127.0.0.1:5555",
     [string]$Package = "jp.co.cygames.princessconnectredive",
     [ValidateRange(1, 1000)]
@@ -44,7 +44,10 @@ function Invoke-Adb {
 }
 
 if (-not (Test-Path -LiteralPath $AdbPath -PathType Leaf)) {
-    throw "ADB executable was not found: $AdbPath"
+    if ($AdbPath) { throw "ADB executable was not found: $AdbPath" }
+    $adbCommand = Get-Command adb -ErrorAction SilentlyContinue
+    if (-not $adbCommand) { throw "ADB was not found. Install Android SDK Platform-Tools and add adb to PATH, or pass -AdbPath." }
+    $AdbPath = $adbCommand.Source
 }
 
 $BlueStacks = Resolve-BlueStacksPath -Configured $BlueStacksPath

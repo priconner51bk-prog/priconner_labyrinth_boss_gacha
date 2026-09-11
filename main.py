@@ -62,7 +62,7 @@ class BossGachaWindow:
         ttk.Label(root, text="対象ウィンドウ：BlueStacks（Android画面 1280x720）", padding=(12, 8)).pack(fill="x")
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
-        self.serial = self._entry(form, "ADB serial", "emulator-5554", 0)
+        self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
         self.passports = self._entry(form, "試行回数", "1000", 1)
         ttk.Label(form, text="ギルド").grid(row=2, column=0, sticky="w", pady=3)
         self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
