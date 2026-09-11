@@ -75,18 +75,19 @@ def main() -> int:
         }, ensure_ascii=False))
         return 2
     def observe_screen_stable() -> str | None:
-        # BlueStacks may return one empty frame during a transition. Keep the
-        # retry window short, but long enough to avoid ending the whole gacha
-        # before the first stable screen observation.
-        for attempt in range(8):
+        # BlueStacksの再起動直後はADB接続済みでも、描画バッファと
+        # スクリーンショット取得が安定するまで数秒かかることがある。
+        # 初回判定を0.8秒で打ち切ると、画面参照前に停止してしまうため、
+        # 短い間隔で最大7.5秒だけ再試行する。
+        for attempt in range(30):
             try:
                 observed = probe.observe_screen()
             except Exception:
                 observed = None
             if observed:
                 return observed
-            if attempt < 7:
-                time.sleep(0.10)
+            if attempt < 29:
+                time.sleep(0.25)
         return None
     try:
         screen_id = observe_screen_stable()
@@ -334,7 +335,10 @@ def main() -> int:
             normalized_variants = {re.sub(r"\s+", "", variant) for variant in variants}
             if any(variant in text or text in variant for variant in normalized_variants):
                 return canonical
-        return None
+        observed = [(str(line.text), round(float(line.confidence), 3)) for line in lines]
+        raise RuntimeError(
+            f"boss_name_unrecognized:{side}:ocr_text={text!r}:ocr_lines={observed!r}:image={ocr_path}"
+        )
 
     def verify_guild(expected: str) -> bool:
         """出発ボーナスのギルド表記を確認してから次画面へ進む。"""

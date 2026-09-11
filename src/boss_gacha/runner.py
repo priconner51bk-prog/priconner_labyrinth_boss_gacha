@@ -70,7 +70,10 @@ class BossGachaRunner:
                 raise
             except Exception as exc:
                 # OCR/ADBの予期せぬ例外を上位へ漏らさず、次の入力を禁止する。
-                raise LiveSafetyStop(f"phase_error:{phase}:{type(exc).__name__}") from exc
+                # 型名だけでは原因を追えないため、例外メッセージも結果へ残す。
+                detail = str(exc).replace("\r", " ").replace("\n", " ").strip()
+                suffix = f":{detail[:240]}" if detail else ""
+                raise LiveSafetyStop(f"phase_error:{phase}:{type(exc).__name__}{suffix}") from exc
             phase_samples.setdefault(phase, []).append((time.perf_counter() - started) * 1000)
             if self.timing_trace is not None:
                 self.timing_trace.record(f"boss_gacha:{phase}", phase_samples[phase][-1])
