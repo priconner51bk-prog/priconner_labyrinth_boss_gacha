@@ -55,7 +55,10 @@ def advance_startup_screen(
             title_taps = 1
         elif screen in known:
             return {"ok": True, "title_tap_count": title_taps, "screen_sequence": sequence}
-        elif screen is None or screen in {"splash", "startup_splash", "launching"}:
+        elif screen is None:
+            if len(sequence) == 1:
+                return {"ok": False, "stop_reason": "unknown_startup_screen", "title_tap_count": title_taps, "screen_sequence": sequence}
+        elif screen in {"splash", "startup_splash", "launching"}:
             pass
         else:
             return {"ok": False, "stop_reason": "unknown_startup_screen", "title_tap_count": title_taps, "screen_sequence": sequence}
