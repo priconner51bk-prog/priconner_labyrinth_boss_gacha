@@ -324,7 +324,14 @@ def main() -> int:
         if image is None:
             raise RuntimeError("ボス名画像を読み込めません")
         cropped = roi.crop_array(image)
-        enlarged = cv2.resize(cropped, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        # ROIは維持し、文字の上下左右に少量の境界を追加してから二値化する。
+        # 文字がROI端に接すると、認識器が1文字だけを拾うことがある。
+        padded = cv2.copyMakeBorder(
+            cropped, 6, 6, 8, 8, cv2.BORDER_CONSTANT, value=(255, 255, 255)
+        )
+        gray = cv2.cvtColor(padded, cv2.COLOR_BGR2GRAY)
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        enlarged = cv2.resize(binary, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
         ocr_path = live_dir / f"task_boss_gacha_{side}_{frame_index['value']}_name_ocr.png"
         if not cv2.imwrite(str(ocr_path), enlarged):
             raise RuntimeError("ボス名OCR画像を保存できません")

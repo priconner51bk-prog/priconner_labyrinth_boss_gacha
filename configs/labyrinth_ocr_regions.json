@@ -42,8 +42,8 @@
       "purpose": "エリアマップ上部タイムラインの右側BOSS詳細を開く位置"
     },
     "boss_detail_name": {
-      "normalized": {"x": 0.25, "y": 0.14, "width": 0.32, "height": 0.10},
-      "pixel_reference": {"left": 320, "top": 100, "right": 730, "bottom": 175},
+      "normalized": {"x": 0.306, "y": 0.139, "width": 0.194, "height": 0.035},
+      "pixel_reference": {"left": 392, "top": 100, "right": 640, "bottom": 125},
       "purpose": "モンスター詳細画面のボス名だけをOCRする",
       "post_ocr_action": "close"
     }

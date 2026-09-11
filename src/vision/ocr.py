@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .roi import NormalizedROI
 
-DEFAULT_OCR_VERSION = "PP-OCRv4"
+DEFAULT_OCR_VERSION = "PP-OCRv5"
 
 
 def gpu_utilization_percent(*, timeout_seconds: float = 0.5) -> float | None:
@@ -150,17 +150,15 @@ class PaddleOCRAdapter:
         adapter.language = "japan"
         adapter._roi_cache = OrderedDict()
         adapter._engine = PaddleOCR(
-            # ゲーム画面の短い日本語ラベルでは v4 mobile を既定にする。
-            # この選択は汎用ベンチマークではなく、本プロジェクトの実画面評価に基づく。
-            # 検出・認識とも PP-OCRv4 mobile を明示する。
-            text_detection_model_name="PP-OCRv4_mobile_det",
-            text_recognition_model_name="PP-OCRv4_mobile_rec",
+            # 日本語の検出・認識は言語自動解決に任せる。
+            # PaddleOCR 3.xでは PP-OCRv4 に日本語認識モデルがないため、
+            # lang=japan と PP-OCRv5 の組み合わせを標準経路にする。
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
             device=device,
             lang="japan",
-            ocr_version=DEFAULT_OCR_VERSION,
+            ocr_version="PP-OCRv5",
         )
         return adapter
 
