@@ -36,9 +36,11 @@
   - 見積確度: HIGH
   - 見積根拠: PowerShellとargparseの引数表を突合し、CLIテストを追加する
 
-- [ ] **R-03 | P0 | W:M | RISK:M | CLOUD | 試行回数の既定値を単一設定へ統一する**
-  - 状態: TODO
+- [x] **R-03 | P0 | W:M | RISK:M | CLOUD | 試行回数の既定値を単一設定へ統一する**
+  - 状態: DONE
   - 完了条件: CLI、GUI、PowerShell、Orchestrator、設定ファイルの既定値と上限が一致する
+  - 完了根拠: 設定ファイルとOrchestratorの既定値を1000へ統一し、GUIの表示フォールバックも1000へ修正。対象テスト26件、compileall、diff check成功。
+  - 実測時間: 6分
   - 推定時間: 60分
   - 推定時間（分）: 60
   - 見積確度: MEDIUM

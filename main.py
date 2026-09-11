@@ -296,7 +296,7 @@ class BossGachaWindow:
             return
         labels = {
             "matched": "成功：対象ボスの組み合わせに一致",
-            "max_attempts": f"失敗：{payload.get('max_attempts', 100)}回の試行上限に到達",
+            "max_attempts": f"失敗：{payload.get('max_attempts', 1000)}回の試行上限に到達",
             "safety_stop": "停止：安全停止（入力を継続しません）",
         }
         label = labels.get(payload.get("status"))

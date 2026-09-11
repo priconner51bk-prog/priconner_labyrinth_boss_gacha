@@ -139,7 +139,7 @@ class LabyrinthOrchestrator:
         target_policy_path: str | Path | None = None,
         screen_guard: ScreenGuard | None = None,
         enforce_script_tasks: bool = True,
-        max_boss_gacha_attempts: int = 10,
+        max_boss_gacha_attempts: int = 1000,
         resume_from_current_screen: bool = False,
     ) -> None:
         self.state: dict[str, Any] = dict(state or {})

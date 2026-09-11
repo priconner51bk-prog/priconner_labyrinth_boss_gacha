@@ -1,6 +1,6 @@
 ﻿{
   "serial": "127.0.0.1:5555",
-  "passports": 100,
+  "passports": 1000,
   "difficulty": 10,
   "guild": "美食殿",
   "allowed_bosses": {
