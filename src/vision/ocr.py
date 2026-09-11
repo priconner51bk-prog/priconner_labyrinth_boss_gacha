@@ -152,11 +152,9 @@ class PaddleOCRAdapter:
         adapter._engine = PaddleOCR(
             # ゲーム画面の短い日本語ラベルでは v4 mobile を既定にする。
             # この選択は汎用ベンチマークではなく、本プロジェクトの実画面評価に基づく。
-            # PaddleOCR 3.x の言語別自動解決は v4 を日本語に紐付けないため、
-            # PaddleOCR 3.x には PP-OCRv4 の日本語認識モデル名がないため、
-            # 検出はv4、認識は公式の日本語モデルを明示する。
+            # 検出・認識とも PP-OCRv4 mobile を明示する。
             text_detection_model_name="PP-OCRv4_mobile_det",
-            text_recognition_model_name="japan_PP-OCRv3_mobile_rec",
+            text_recognition_model_name="PP-OCRv4_mobile_rec",
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
