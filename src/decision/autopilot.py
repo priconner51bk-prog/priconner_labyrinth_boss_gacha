@@ -355,24 +355,6 @@ class AutoPilot:
         }
 
     def _do_boss_gacha(self) -> dict[str, Any]:
-        # 現行方針ではボスガチャを行わず、ボス名を未確認のまま進行する。
-        # エリア3/5のボス対象は実際にボスへ到達した時の画面確認に委譲し、
-        # 未取得の名前や結果を推測して記録しない。
-        screen_check = self._invoke("task_check_current_screen_live.py", [])
-        if str(screen_check.get("screen_id", "")) == "labyrinth_top":
-            prepared = self._invoke("task_prepare_l03_screen_live.py", [])
-            if str(prepared.get("status", "")) != "ready":
-                self._stop_reason = f"start_after_gacha_skip_failed:{prepared.get('status', 'unknown')}"
-                return self._terminal("stopped", self._stop_reason)
-        returned = self._invoke("task_return_initial_char_live.py", [])
-        if str(returned.get("status", "")) != "ready":
-            self._stop_reason = f"return_initial_character_after_skip_failed:{returned.get('status', 'unknown')}"
-            return self._terminal("stopped", self._stop_reason)
-        self.state.phase = "select_initial_characters"
-        return self._action("boss_gacha", {"status": "skipped", "boss_names": "unconfirmed",
-                                            "return": returned})
-
-        # 旧ガチャ経路は保持するが、現行実行方針からは到達させない。
         # ボス名確定後の復帰で、ゲーム画面がすでに初期キャラ選択へ
         # 戻っている場合は、再ガチャせず選択フェーズへ引き継ぐ。
         if all(str(area) in self.state.boss_names for area in ("3", "5")):
