@@ -378,7 +378,19 @@ def main() -> int:
                 except (OSError, ValueError, TypeError):
                     pass
             return True
-        except Exception:
+        except Exception as exc:
+            # tap_rejected だけでは、ADB送信失敗・画面変化待ち・座標
+            # 解決失敗を区別できず、実機原因の追跡ができない。入力は
+            # 再試行せず、型と内容を構造化して安全停止の直前に出力する。
+            print(json.dumps({
+                "tap_error": {
+                    "screen": screen,
+                    "label": label,
+                    "point": list(point),
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            }, ensure_ascii=False))
             return False
 
     def read_name(side: str) -> str | None:
