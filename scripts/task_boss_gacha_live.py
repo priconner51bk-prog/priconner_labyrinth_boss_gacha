@@ -194,13 +194,18 @@ def main() -> int:
             # カード矩形を切り出して比較する。
             def template_point(frame):
                 import cv2
-                template_specs = {
-                    "美食殿": ("guild_mishoku_card.png", None),
-                    "トゥインクルウィッシュ": ("guild_twinkle_card.png", "guild_confirm_mishoku.png"),
-                    "サレンディア救護院": ("guild_salendia_card.png", "guild_confirm_mishoku.png"),
+                template_names = {
+                    "美食殿": "mishoku", "トゥインクルウィッシュ": "twinkle_wish",
+                    "サレンディア救護院": "salendia", "王宮騎士団（NIGHTMARE）": "royal_nightmare",
+                    "ラビリンス": "labyrinth", "カルミナ": "carmina",
+                    "ディアボロス": "diabolos", "牧場（エリザベスパーク）": "ranch_elizabeth",
+                    "メルクリウス財団": "mercurius", "トワイライトキャラバン": "twilight_caravan",
+                    "リトルリリカル": "little_lyrical", "自警団（カォン）": "kaon",
+                    "フォレスティエ": "forestier", "ルーセント学院": "lucent_academy",
                 }
-                filename, source_name = template_specs.get(label, (None, None))
-                template_path = ROOT / "data" / "template_migration" / "templates" / (filename or "")
+                filename = template_names.get(label)
+                source_name = None
+                template_path = ROOT / "data" / "template_migration" / "templates" / "guild_cards" / (f"{filename}.png" if filename else "")
                 template = cv2.imread(str(template_path), cv2.IMREAD_COLOR) if filename and template_path.exists() else None
                 if template is None and source_name:
                     source = cv2.imread(str(ROOT / "data" / "template_migration" / "source" / source_name), cv2.IMREAD_COLOR)

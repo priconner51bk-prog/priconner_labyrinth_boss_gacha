@@ -63,6 +63,21 @@ def test_all_configured_guilds_are_reachable_by_fixed_order_scan():
             assert position == target
 
 
-def test_unregistered_guild_has_no_template_selection_point():
-    """テンプレート未登録のギルドを推測座標で押さないことを確認する。"""
-    assert "自警団（カォン）" not in {"美食殿", "トゥインクルウィッシュ", "サレンディア救護院"}
+def test_all_configured_guilds_have_ascii_card_templates():
+    """全ギルドが実機カードテンプレートへ対応付けられていることを確認する。"""
+    import json
+
+    config = json.loads(
+        (ROOT / "configs" / "labyrinth_guild_starting_members.json").read_text(encoding="utf-8")
+    )
+    names = {
+        "美食殿": "mishoku", "トゥインクルウィッシュ": "twinkle_wish",
+        "サレンディア救護院": "salendia", "王宮騎士団（NIGHTMARE）": "royal_nightmare",
+        "ラビリンス": "labyrinth", "カルミナ": "carmina",
+        "ディアボロス": "diabolos", "牧場（エリザベスパーク）": "ranch_elizabeth",
+        "メルクリウス財団": "mercurius", "トワイライトキャラバン": "twilight_caravan",
+        "リトルリリカル": "little_lyrical", "自警団（カォン）": "kaon",
+        "フォレスティエ": "forestier", "ルーセント学院": "lucent_academy",
+    }
+    assert set(config["guilds"]) == set(names)
+    assert all((ROOT / "data/template_migration/templates/guild_cards" / f"{slug}.png").is_file() for slug in names.values())
