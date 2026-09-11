@@ -145,6 +145,15 @@ def main() -> int:
     if not guild_label:
         print(json.dumps({"status": "safety_stop", "reason": "guild_not_configured"}, ensure_ascii=False))
         return 2
+    configured_guilds = guild_data.get("guilds", {}) if isinstance(guild_data, dict) else {}
+    if guild_label not in configured_guilds:
+        print(json.dumps({
+            "status": "safety_stop",
+            "reason": "guild_not_registered",
+            "guild": guild_label,
+            "registered_guilds": list(configured_guilds),
+        }, ensure_ascii=False))
+        return 2
 
     # Resolve resume/new-departure state before loading templates. Resume
     # assistance must be immediate and must not wait on model initialization.
