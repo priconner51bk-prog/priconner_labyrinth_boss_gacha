@@ -19,9 +19,9 @@
 - 対象ボスの判定と最大試行回数の制御
 - 画面遷移のガード付きリトライ
 - 実機操作を行わない単体テスト・判定デバッグ
-- 内蔵した共通基盤（画面認識、OCR、ADB、設定）を利用した実機実行
+- 内蔵した共通基盤（テンプレート画面認識、ADB、設定）を利用した実機実行
 
-画面キャプチャ、OCR、ADB 入力そのものは本プロジェクトに実装せず、外部から注入する構成です。実機処理は安全停止を優先し、画面や設定を確認できない場合は入力を行いません。
+画面キャプチャとADB入力はアダプター経由で扱います。実機処理は安全停止を優先し、画面や設定を確認できない場合は入力を行いません。
 
 ## ボス候補と今回の対象
 
@@ -38,8 +38,8 @@
 
 ```text
 src/boss_gacha/                 ボスガチャのドメインロジック
-scripts/debug_boss_gacha.py     ADB/OCR なしの判定デバッグ
-scripts/task_boss_gacha_live.py ADB/OCR を使う実機エントリーポイント
+scripts/debug_boss_gacha.py     ADBなしの判定デバッグ
+scripts/task_boss_gacha_live.py ADB/テンプレートを使う実機エントリーポイント
 tests/                          ボスガチャ専用テスト
 docs/                           運用・開発手順
 ```
@@ -73,7 +73,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-依存定義を追加した場合は、その定義ファイルを優先してインストールしてください。GPU を使う場合は、PaddlePaddle と GPU ドライバーの対応を確認してください。
+依存定義を追加した場合は、その定義ファイルを優先してインストールしてください。
 
 ### 3. ADB クライアントを準備する
 
@@ -132,13 +132,12 @@ adb -s 127.0.0.1:5555 shell wm density
 
 画面認識は座標・テンプレート・OCR 領域に依存するため、BlueStacks のウィンドウサイズ、DPI、ゲーム内表示倍率、縦横比を、検証済みの環境から変更しないでください。ADB 操作ではタイトルバーやウィンドウ枠を基準にせず、Android クライアント画面の解像度を取得して `1280x720` 基準の座標を自動補正します。画面比率が異なる場合は誤操作防止のため安全停止します。
 
-### 5. OCR を準備する
+### 5. テンプレートを準備する
 
-標準の日本語モデルを使う場合は、実行時に `--default-models` を指定します。標準モデルは、ゲーム画面の短い日本語ラベルでの実測結果を優先して `PP-OCRv4` mobile を使用します。独自モデルを使う場合は検出モデルと認識モデルを両方指定します。
+実機テンプレートは `configs/live_screen_templates.json` から参照します。テンプレートが不足・不一致の場合は入力せず安全停止します。OCRモデルの準備は不要です。
 
 ```powershell
-python main.py live `
-  --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555
 ```
 
 ### 6. preflight で確認する
@@ -195,7 +194,7 @@ python scripts/debug_boss_gacha.py --observations path\to\observations.json
 
 引数なしで起動すると操作ウィンドウが開きます。ウィンドウの「開始」は確認ダイアログの後に ADB 入力を有効にした実機処理を開始し、「停止（即時）」は実行中のプロセスを直ちに終了します。停止・異常終了後は「再開（自動判定）」を押すと、現在画面を内部判定して再開します。画面が曖昧な場合は安全停止します。
 
-入力する項目は ADB serial、今回の試行回数、ギルド、エリア 3/5 の許容ボスです。ギルドはゲーム内カード表記で `configs/labyrinth_guild_starting_members.json` に登録された全候補から選択でき、既定値は美食殿です。難易度は現在対応している既定値に固定しています。既定の試行回数は100回で、1試行につきパスポートを1枚消費します。OCRはPP-OCRv4検出＋日本語認識モデルに固定しています。開始前に BlueStacks の接続と対象画面を確認してください。
+入力する項目は ADB serial、今回の試行回数、ギルド、エリア 3/5 の許容ボスです。ギルドはゲーム内カード表記で `configs/labyrinth_guild_starting_members.json` に登録された全候補から選択でき、既定値は美食殿です。難易度は現在対応している既定値に固定しています。既定の試行上限は1000回で、1試行につきパスポートを1枚消費します。開始前に BlueStacks の接続と対象画面を確認してください。
 
 GUIで選択したADB serial、試行回数、ギルド、ボスのチェック状態は、次回起動時にローカル設定から復元します。この設定ファイルは端末固有情報を含むためGitHubへ公開しません。
 
@@ -210,7 +209,7 @@ python main.py
 python main.py debug --observations path\to\observations.json
 
 # 実機 preflight（入力なし）
-python main.py live --serial 127.0.0.1:5555 --default-models
+python main.py live --serial 127.0.0.1:5555
 
 # 利用枚数と対象ボスを指定した実機実行
 python main.py live --execute --passports 10 --default-models `
@@ -235,7 +234,7 @@ python main.py live `
   --area3-boss "ボス名" --area5-boss "ボス名"
 ```
 
-`--passports N` は「1枚消費する試行を最大N回まで許可する」指定です。既定値は100回で、N枚を一括消費する指定ではありません。結果は `matched`＝成功、`max_attempts`＝失敗（上限到達）、`safety_stop`＝停止（安全条件不成立）として区別されます。`--passports 0`、許容ボス未指定、画面不一致、OCRモデル未設定などの場合は停止します。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
+`--passports N` は「1枚消費する試行を最大N回まで許可する」指定です。既定値は1000回で、試験時は `--passports 1` を指定します。結果は `matched`、`max_attempts`、`safety_stop` として区別されます。実機操作の全オプションと復帰方法は [docs/OPERATIONS.md](docs/OPERATIONS.md) を参照してください。
 
 ## Git での変更手順
 
@@ -254,7 +253,7 @@ git diff --check
 
 GitHub に push する前に、次のようなファイルをコミット対象から外してください。これらは `.gitignore` でも除外しています。
 
-- BlueStacks のスクリーンショット、OCR 結果、操作ログ、タイミングログ
+- BlueStacks のスクリーンショット、操作ログ、タイミングログ
 - ADB のシリアル番号、端末情報、個人環境が分かる設定やエクスポート
 - OCR モデルや大容量のモデルファイル
 - `.env`、API キー、トークン、パスワード、秘密鍵

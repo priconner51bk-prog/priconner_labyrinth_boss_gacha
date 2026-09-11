@@ -146,7 +146,7 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": "guild_not_configured"}, ensure_ascii=False))
         return 2
 
-    # Resolve resume/new-departure state before loading OCR models.  Resume
+    # Resolve resume/new-departure state before loading templates. Resume
     # assistance must be immediate and must not wait on model initialization.
     if screen_id == "labyrinth_top":
         try:
@@ -184,16 +184,11 @@ def main() -> int:
 
     def tap(screen: str, label: str) -> bool:
         def dynamic_guild_point() -> tuple[int, int] | None:
-            """Find a configured guild label from OCR when no template exists.
-
-            Guild cards are dynamic artwork, so a stale screenshot template is
-            not reliable.  OCR is restricted to this one selection action and
-            requires a confident bounding box; otherwise the action is refused.
-            """
+            """Find a configured guild card using templates only."""
             if screen != "guild_select":
                 return None
             # 収集済みカードをテンプレート照合する。テンプレートは
-            # スクロール後にも毎ページ再評価する必要があるため、OCR走査の
+            # スクロール後にも毎ページ再評価する必要があるため、走査の
             # 外側ではなく、この関数の各呼び出しで現在画面を取得する。
             # source画像は同一レイアウトの4カードを含むため、対象ごとに
             # カード矩形を切り出して比較する。
@@ -337,8 +332,8 @@ def main() -> int:
                 dynamic_point = dynamic_close_point()
             if dynamic_point is None:
                 dynamic_point = dynamic_withdraw_ok_point()
-            # ボス詳細・確認ダイアログは最小ROIのOCR位置を一次根拠にする。
-            # 全テンプレート照合を先に行うと、閉じる操作が不要に遅れる。
+            # ボス詳細・確認ダイアログは固定テンプレートを一次根拠にする。
+            # 未一致時は入力せず安全停止する。
             if screen_matches and dynamic_point is not None:
                 break
             if screen_matches and probe.target_visible(probe_label):
