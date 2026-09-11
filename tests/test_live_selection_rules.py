@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from boss_gacha import BossGachaController, BossGachaPolicy
+from boss_gacha.guild_selection import scan_directions
 from vision.template_screen_probe import load_template_probe_config
 
 
@@ -41,3 +42,27 @@ def test_policy_accepts_exactly_1000_attempts():
         result = controller.evaluate({"3": "別"})
     assert result["status"] == "withdraw_and_retry"
     assert controller.evaluate({"3": "別"})["status"] == "max_attempts"
+
+
+def test_all_configured_guilds_are_reachable_by_fixed_order_scan():
+    import json
+
+    config = json.loads(
+        (ROOT / "configs" / "labyrinth_guild_starting_members.json").read_text(encoding="utf-8")
+    )
+    guilds = list(config["guilds"])
+    assert len(guilds) == 14
+    for start in range(len(guilds)):
+        for target in range(len(guilds)):
+            directions = scan_directions(
+                len(guilds), current_index=start, target_index=target
+            )
+            position = start
+            for swipe_start, swipe_end in directions:
+                position += 1 if swipe_end[0] < swipe_start[0] else -1
+            assert position == target
+
+
+def test_unregistered_guild_has_no_template_selection_point():
+    """テンプレート未登録のギルドを推測座標で押さないことを確認する。"""
+    assert "自警団（カォン）" not in {"美食殿", "トゥインクルウィッシュ", "サレンディア救護院"}

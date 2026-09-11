@@ -11,6 +11,8 @@
 | AT-05 | 試験回数上限 | 1回相当および1000回上限 | 1000回目まで許可し、1001回目は設定できない | `tests/test_live_selection_rules.py`, `tests/test_boss_gacha_controller.py` |
 | AT-06 | ランナー状態遷移 | retry、matched、safety stop | 状態と試行回数が一致し、例外を成功扱いしない | `tests/test_boss_gacha_runner.py`, `tests/test_boss_gacha_live_workflow.py` |
 | AT-07 | OCR非依存 | 実行スクリプトのテンプレート専用経路 | OCRモデルを初期化せず、未一致時は安全停止 | `tests/test_live_selection_rules.py` と静的参照確認 |
+| AT-08 | 全ギルド走査 | 設定済み14ギルドの全開始位置・全目的位置 | 固定順序の走査で全組み合わせが目的位置へ到達 | `tests/test_live_selection_rules.py` |
+| AT-09 | 未登録カード | テンプレート未登録ギルド | 未確認カードの推測座標入力を行わない | `tests/test_live_selection_rules.py` |
 
 ## 実行コマンド
 
