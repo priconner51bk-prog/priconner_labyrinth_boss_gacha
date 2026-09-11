@@ -445,6 +445,7 @@ def main() -> int:
             "venom_salamandra": "ベノムサラマンドラ",
             "madam_electra": "マダムエレクトラ",
             "goblin_lord": "ゴブリンロード",
+            "greater_golem": "グレーターゴーレム",
             "ultima_guardian": "アルティマガーディアン",
             "ultima_guardian_jp": "アルティマガーディアン",
             "chimera": "キマイラ",
