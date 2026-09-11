@@ -256,19 +256,23 @@ def main() -> int:
                     page_index = target_index // 3
                     max_page_index = max(1, (len(guild_order) - 1) // 3)
                     target_scroll_x = 25 + round(1230 * page_index / max_page_index)
-                    run_adb_swipe(
-                        (1100, 658), (target_scroll_x, 658), serial=args.serial,
-                        healthcheck=True,
-                        screen_guard=lambda: observe_screen_stable() == "guild_select",
-                        task_name="guild_select_scrollbar_position",
-                        timing_trace=trace,
-                    )
-                    time.sleep(0.45)
                     import cv2
-                    capture.capture(path)
-                    point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
-                    if point is not None:
-                        return point
+                    # 保存位置によりスクロールバーのつまみは左右どちらにも
+                    # あり得る。両端を開始候補にし、つまみを掴めた場合だけ
+                    # 目的ページへ移動する。
+                    for scrollbar_start in ((420, 658), (1100, 658)):
+                        run_adb_swipe(
+                            scrollbar_start, (target_scroll_x, 658), serial=args.serial,
+                            healthcheck=True,
+                            screen_guard=lambda: observe_screen_stable() == "guild_select",
+                            task_name="guild_select_scrollbar_position",
+                            timing_trace=trace,
+                        )
+                        time.sleep(0.45)
+                        capture.capture(path)
+                        point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
+                        if point is not None:
+                            return point
                 except Exception:
                     pass
             directions = scan_directions(
@@ -409,6 +413,7 @@ def main() -> int:
             "ultima_guardian": "アルティマガーディアン",
             "ultima_guardian_jp": "アルティマガーディアン",
             "chimera": "キマイラ",
+            "frost_hound": "フロストハウンド",
         }
         if best_name in aliases and best_score >= 0.82:
             trace.record("template_boss_name", (time.perf_counter() - started) * 1000,
@@ -419,8 +424,13 @@ def main() -> int:
         )
 
     def verify_guild(expected: str) -> bool:
-        """テンプレートだけでギルド確認画面を検証する。"""
-        return probe.target_visible("ギルド選択確認")
+        """選択カード確認後のボーナス画面をテンプレートで検証する。
+
+        ギルド名はカード選択時に対象テンプレートで確認済みであり、
+        ボーナス画面には同じ名前が表示されないため、ここでは画面遷移の
+        固有ボタンを検証する。
+        """
+        return probe.target_visible("出発ボーナス閉じる")
 
     # 開始・再開とも現在画面を自動判定する。画面が曖昧な場合は入力せず停止する。
     start_screen = screen_id
