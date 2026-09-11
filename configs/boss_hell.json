@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "boss_type": "hell_tile_boss",
+  "bosses": [
+    {"order": 1, "name": "ミソラ"},
+    {"order": 2, "name": "ホーネットクイーン"},
+    {"order": 3, "name": "ゼーン"},
+    {"order": 4, "name": "ミロク"}
+  ]
+}

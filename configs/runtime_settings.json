@@ -1,0 +1,53 @@
+{
+  "safety": {
+    "require_screen_guard_before_task": true,
+    "require_screen_guard_before_adb": true,
+    "unknown_screen_action": "stop_immediately"
+  },
+  "adb": {
+    "healthcheck_before_tap": true,
+    "restart_on_connection_failure": true,
+    "restart_attempts": 1,
+    "never_retry_unknown_tap_result": true,
+    "debug_coordinate_jitter_px": 0,
+    "debug_coordinate_jitter_max_px": 2
+  },
+  "timing": {
+    "mode": "adaptive_when_screen_probe_available",
+    "minimum_action_wait_seconds": 0.3,
+    "screen_probe_interval_seconds": 0.1,
+    "screen_change_timeout_seconds": 2.0,
+    "fallback_fixed_wait_seconds": 2.0,
+    "capture_every_action": true
+  },
+  "labyrinth": {
+    "poll_interval_seconds": 2.0,
+    "bluestacks_window_title": "BlueStacks",
+    "adb_serial": "127.0.0.1:5555",
+    "capture_target": "bluestacks_client_area",
+    "unexpected_screen_policy": "stop_immediately",
+    "window_layout": {
+      "target_android_width": 1280,
+      "target_android_height": 720,
+      "verify_at_session_start": true,
+      "reverify_on_window_change": true,
+    "do_not_resize_before_every_task": true
+    },
+    "learning": {
+      "mode": "assisted",
+      "reference_run_required": true,
+      "scopes": ["initial", "normal", "extreme", "hell", "boss", "area_boss"],
+      "min_confirmed_victories": 3,
+      "min_win_rate": 0.8,
+      "auto_promote": false
+    },
+    "automation": {
+      "auto_continue_decision": true,
+      "auto_plan_route": true,
+      "auto_select_event": true,
+      "auto_select_reward": true,
+      "auto_select_ex_equipment": true,
+      "auto_select_shop": false
+    }
+  }
+}

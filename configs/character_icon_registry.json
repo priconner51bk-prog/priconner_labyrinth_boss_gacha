@@ -1,0 +1,57 @@
+{
+  "schema_version": "2.0",
+  "image_size": [1280, 720],
+  "screen_settings": {
+    "sort_order": "編成順・昇順",
+    "filter": "全て",
+    "card_centers": {
+      "1": [145, 240], "2": [290, 240], "3": [435, 240], "4": [580, 240],
+      "5": [725, 240], "6": [870, 240], "7": [1015, 240], "8": [1160, 240],
+      "9": [145, 395], "10": [290, 395], "11": [435, 395], "12": [580, 395],
+      "13": [725, 395], "14": [870, 395], "15": [1015, 395]
+    }
+  },
+  "character_pool": {
+    "pool_id": "global_character_pool",
+    "image_directory": "data/character_pool/サレンディア救護院",
+    "manifest": "data/character_pool/サレンディア救護院/pool_manifest.json",
+    "characters": {
+      "char_ayane": {"name": "アヤネ", "icon": "data/character_pool/サレンディア救護院/position_04.png", "features_confirmed": false},
+      "char_saren_new_year": {"name": "サレン（ニューイヤー）", "icon": "data/character_pool/サレンディア救護院/position_11.png", "features_confirmed": false},
+      "char_kurumi_stage": {"name": "クルミ（ステージ）", "icon": "data/character_pool/サレンディア救護院/position_14.png", "features_confirmed": false},
+      "char_shefi_swimsuit": {"name": "水着シェフィ", "icon": null, "features_confirmed": false},
+      "char_pecorine_6": {"name": "★6ペコリーヌ", "icon": null, "features_confirmed": false},
+      "char_pecorine_new_year": {"name": "ニューイヤーペコリーヌ", "icon": null, "features_confirmed": false},
+      "unknown_position_01": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_01.png", "features_confirmed": false},
+      "unknown_position_02": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_02.png", "features_confirmed": false},
+      "unknown_position_03": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_03.png", "features_confirmed": false},
+      "unknown_position_05": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_05.png", "features_confirmed": false},
+      "unknown_position_06": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_06.png", "features_confirmed": false},
+      "unknown_position_07": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_07.png", "features_confirmed": false},
+      "unknown_position_08": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_08.png", "features_confirmed": false},
+      "unknown_position_09": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_09.png", "features_confirmed": false},
+      "unknown_position_10": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_10.png", "features_confirmed": false},
+      "unknown_position_12": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_12.png", "features_confirmed": false},
+      "unknown_position_13": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_13.png", "features_confirmed": false},
+      "unknown_position_15": {"name": null, "icon": "data/character_pool/サレンディア救護院/position_15.png", "features_confirmed": false}
+    }
+  },
+  "guilds": {
+    "サレンディア救護院": {
+      "selectable_character_ids_by_position": {"4": "char_ayane", "11": "char_saren_new_year", "14": "char_kurumi_stage"},
+      "selected_character_ids": ["char_ayane", "char_saren_new_year", "char_kurumi_stage"]
+    },
+    "美食殿": {
+      "selectable_character_ids_by_position": {"1": "char_shefi_swimsuit", "2": "char_pecorine_6", "6": "char_pecorine_new_year"},
+      "selected_character_ids": ["char_shefi_swimsuit", "char_pecorine_6", "char_pecorine_new_year"]
+    }
+  },
+  "recognition_policy": {
+    "method": "multi_metric_reference_match",
+    "require_all_metrics": true,
+    "unknown_action": "safety_stop",
+    "new_character_action": "capture_reference_and_require_confirmation",
+    "conversation_display": "icon_first_when_name_not_required",
+    "name_display_condition": "show_name_only_when_confirmation_or_record_requires_it"
+  }
+}

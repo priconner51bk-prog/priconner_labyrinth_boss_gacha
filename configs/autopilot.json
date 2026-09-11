@@ -1,0 +1,20 @@
+﻿{
+  "serial": "127.0.0.1:5555",
+  "passports": 100,
+  "difficulty": 10,
+  "guild": "美食殿",
+  "allowed_bosses": {
+    "3": ["ベノムサラマンドラ", "グレーターゴーレム"],
+    "5": ["ゴブリンロード"]
+  },
+  "avoid_hell": true,
+  "battle_character_indices": null,
+  "max_steps": 500,
+  "script_timeout_seconds": 300,
+  "web": {
+    "port": 8765,
+    "screenshot_interval_ms": 5000,
+    "refresh_interval_ms": 2000
+  },
+  "state_file": "output/autopilot_state.json"
+}

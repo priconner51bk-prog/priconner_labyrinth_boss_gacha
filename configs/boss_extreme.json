@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "boss_type": "extreme_tile_boss",
+  "bosses": [
+    {"order": 1, "name": "レイスロード"},
+    {"order": 2, "name": "なかよしX"},
+    {"order": 3, "name": "バーンサウルス"},
+    {"order": 4, "name": "グレートトゥンヌス"},
+    {"order": 5, "name": "島クジラ"},
+    {"order": 6, "name": "アンチビースト"}
+  ]
+}
