@@ -40,6 +40,12 @@ python scripts/task_launch_labyrinth_live.py --serial 127.0.0.1:5555
 
 このコマンドはホーム画面から入口へ移動する補助機能で、PaddleOCRサービスを使用します。入口画面を手動で表示できる場合は、通常の `main.py live` 実行だけでよく、OCRの追加準備は不要です。
 
+ホーム画面からの移動も使う場合は、追加で次を実行します。
+
+```powershell
+python -m pip install -r requirements-ocr.txt
+```
+
 GUIを使う場合:
 
 ```powershell

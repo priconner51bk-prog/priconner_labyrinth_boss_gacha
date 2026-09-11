@@ -1,0 +1,4 @@
+# Optional: only required by scripts/task_launch_labyrinth_live.py and
+# scripts/tool_ocr_server.py when starting from the home screen.
+paddleocr>=3.0,<4.0
+paddlepaddle>=3.0,<4.0
