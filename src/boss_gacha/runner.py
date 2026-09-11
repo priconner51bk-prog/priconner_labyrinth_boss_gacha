@@ -112,6 +112,10 @@ class BossGachaRunner:
             if names.get("_early_reject") == "true":
                 measure("withdraw", self.withdraw)
                 self._progress(phase="retry", reason="early_reject")
+                if self.passport_count() <= 0:
+                    return {"status": "safety_stop", "reason": "passport_count_exhausted",
+                            "attempt": self.controller.attempts,
+                            "timing_summary": {key: self._summary(value) for key, value in phase_samples.items()}}
                 continue
             result = measure("evaluate", lambda: self.controller.evaluate(names))
             # 判定根拠を保持し、OCR誤読時に撤退理由を後から監査できるようにする。

@@ -67,3 +67,25 @@ def test_runner_converts_callback_exception_to_safety_stop():
     assert result["status"] == "safety_stop"
     assert "begin_attempt" in result["reason"]
     assert called == []
+
+
+def test_runner_reports_passport_exhaustion_after_early_reject():
+    remaining = {"count": 1}
+    events = []
+
+    def begin():
+        remaining["count"] -= 1
+        events.append("begin")
+
+    runner = BossGachaRunner(
+        BossGachaController(BossGachaPolicy({"3": "対象"}, max_attempts=10)),
+        begin_attempt=begin,
+        read_boss_names=lambda: {"3": "対象外", "_early_reject": "true"},
+        withdraw=lambda: events.append("withdraw"),
+        passport_count=lambda: remaining["count"],
+        safety_check=lambda: True,
+    )
+    result = runner.run()
+    assert result["status"] == "safety_stop"
+    assert result["reason"] == "passport_count_exhausted"
+    assert events == ["begin", "withdraw"]
