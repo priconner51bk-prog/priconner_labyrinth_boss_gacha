@@ -7,6 +7,7 @@
 1. [セットアップとBlueStacks設定](docs/SETUP.md)
 2. [実機運用手順](docs/OPERATIONS.md)
 3. [設定と対応範囲](docs/CONFIGURATION.md)
+4. [ドキュメント一覧](docs/INDEX.md)
 
 最初は必ず `--execute` なしでpreflightを実行し、ラビリンス入口画面を認識できることを確認してください。
 
