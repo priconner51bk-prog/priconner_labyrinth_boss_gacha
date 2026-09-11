@@ -171,10 +171,10 @@ def main() -> int:
     frame_index = {"value": 0}
 
     def wait_screen(expected: str) -> bool:
-        # 画面遷移の上限は2.0秒。6秒固定だった旧実装では空振り時に
-        # 1操作あたり数秒を余分に消費していた。実測95%が1.2秒以内
-        # なので、空振りは早く安全停止する。
-        deadline = time.monotonic() + 2.0
+        # 通常遷移は2秒で打ち切る。ただしギルド選択確認は実機で
+        # ダイアログ描画が遅れるケースがあるため、その遷移だけ5秒待つ。
+        timeout = 5.0 if expected == "guild_confirm" else 2.0
+        deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             observed = observe_screen_stable()
             if observed == expected or (expected == "bonus" and observed == "item_reward"):
