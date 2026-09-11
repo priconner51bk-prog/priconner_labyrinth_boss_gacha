@@ -26,9 +26,11 @@
   - 見積確度: HIGH
   - 見積根拠: 単一モジュールの分岐確認と限定的な回帰テスト
 
-- [ ] **R-02 | P0 | W:M | RISK:H | CLOUD | 起動スクリプトとCLI引数を一致させる**
-  - 状態: TODO
+- [x] **R-02 | P0 | W:M | RISK:H | CLOUD | 起動スクリプトとCLI引数を一致させる**
+  - 状態: DONE
   - 完了条件: 起動スクリプトの全引数がCLIで受理され、1回のドライランで設定が伝播する
+  - 完了根拠: `scripts/start_boss_gacha.ps1` の `--attempts` を `--passports` に変更し、CLI未対応の `--package` を除去。`--help`で `--passports` の受理を確認。コミット `2e1830b`
+  - 実測時間: 5分
   - 推定時間: 45分
   - 推定時間（分）: 45
   - 見積確度: HIGH
