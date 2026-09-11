@@ -77,8 +77,15 @@ def main() -> int:
             screenshot_hashes.add(digest)
             pending.replace(path)
             return path
-        except Exception:
+        except Exception as exc:
             pending.unlink(missing_ok=True)
+            print(json.dumps({
+                "nonfatal_capture_error": {
+                    "label": label,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            }, ensure_ascii=False), file=sys.stderr)
             return None
     try:
         probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
@@ -95,10 +102,12 @@ def main() -> int:
         # スクリーンショット取得が安定するまで数秒かかることがある。
         # 初回判定を0.8秒で打ち切ると、画面参照前に停止してしまうため、
         # 短い間隔で最大7.5秒だけ再試行する。
+        last_error = None
         for attempt in range(30):
             try:
                 observed = probe.observe_screen()
-            except Exception:
+            except Exception as exc:
+                last_error = exc
                 observed = None
             if observed:
                 if last_observed_screen["value"] != observed:
@@ -107,6 +116,14 @@ def main() -> int:
                 return observed
             if attempt < 29:
                 time.sleep(0.25)
+        if last_error is not None:
+            print(json.dumps({
+                "screen_probe_error": {
+                    "attempts": 30,
+                    "error_type": type(last_error).__name__,
+                    "error": str(last_error),
+                }
+            }, ensure_ascii=False), file=sys.stderr)
         return None
     try:
         screen_id = observe_screen_stable()
