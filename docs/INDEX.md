@@ -5,7 +5,6 @@
 - [セットアップとBlueStacks設定](SETUP.md)
 - [設定と対応範囲](CONFIGURATION.md)
 - [実機運用手順](OPERATIONS.md)
-- [画面認識カタログ](SCREEN_CATALOG.md)
 - [セキュリティ注意](../SECURITY.md)
 
 ## 開発者向け
