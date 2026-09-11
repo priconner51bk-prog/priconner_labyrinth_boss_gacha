@@ -55,7 +55,7 @@ class AdbTemplateScreenProbe:
         "ex_equipment": {"おまかせ装備"}, "ex_auto_dialog": {"EX自動設定OK"},
         "ex_auto_dialog": {"EX自動設定OK"}, "ex_equipment_conflict": {"EX装備競合警告", "EX競合キャンセル"},
         "battle_victory": {"勝利次へ"},
-        "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する", "帰還する"},
+        "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する"},
         "boss_detail": {"閉じる"}, "withdraw_confirm": {"撤退確認OK"},
     }
 

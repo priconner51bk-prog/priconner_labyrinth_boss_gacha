@@ -41,7 +41,6 @@
     "出発ボーナス閉じる": {"image": "data/observations/live/run2_bonus.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
     "キャラ加入閉じる": {"image": "data/observations/live/after_initial_character_selection.png", "left": 500, "top": 540, "right": 780, "bottom": 630},
     "撤退する": {"image": "data/observations/live/after_character_join_close.png", "left": 800, "top": 610, "right": 1030, "bottom": 700},
-    "帰還する": {"image": "data/observations/live/current_boss_map_return.png", "left": 1030, "top": 610, "right": 1250, "bottom": 700},
     "撤退確認OK": {"image": "data/observations/live/current_after_withdraw_timeout.png", "left": 650, "top": 440, "right": 950, "bottom": 550},
     "移動先確認OK": {"image": "data/observations/live/after_map_node_tap.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
     "イベント移動OK": {"image": "data/observations/live/task_move_confirm_event_0001_source.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
