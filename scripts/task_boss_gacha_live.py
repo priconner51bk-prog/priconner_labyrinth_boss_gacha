@@ -156,8 +156,16 @@ def main() -> int:
         guild_data = json.loads(guild_config.read_text(encoding="utf-8"))
         preferred = guild_data.get("selection_policy", {}).get("preferred_guilds", [])
         default_guild = str(preferred[0]).strip() if preferred else "フォレスティエ"
-    except Exception:
+    except Exception as exc:
         default_guild = "フォレスティエ"
+        print(json.dumps({
+            "nonfatal_config_error": {
+                "file": str(guild_config),
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "fallback_guild": default_guild,
+            }
+        }, ensure_ascii=False), file=sys.stderr)
     guild_label = (args.guild or default_guild).strip()
     if not guild_label:
         print(json.dumps({"status": "safety_stop", "reason": "guild_not_configured"}, ensure_ascii=False))
@@ -371,8 +379,14 @@ def main() -> int:
                     point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
                     if point is not None:
                         return point
-                except Exception:
-                    pass
+                except Exception as exc:
+                    print(json.dumps({
+                        "nonfatal_probe_error": {
+                            "phase": "guild_post_swipe_template_probe",
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    }, ensure_ascii=False), file=sys.stderr)
             return None
 
         # 画面IDの切替直後は背景テンプレートだけ先に一致することがある。
