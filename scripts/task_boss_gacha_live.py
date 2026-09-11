@@ -152,6 +152,7 @@ def main() -> int:
     # ギルドは設定を唯一の既定値とし、CLI指定で上書きする。座標・表示テンプレートが
     # 未登録のギルドは tap() が安全停止するため、未確認座標を推測して入力しない。
     guild_config = ROOT / "configs" / "labyrinth_guild_starting_members.json"
+    guild_data = {}
     try:
         guild_data = json.loads(guild_config.read_text(encoding="utf-8"))
         preferred = guild_data.get("selection_policy", {}).get("preferred_guilds", [])
