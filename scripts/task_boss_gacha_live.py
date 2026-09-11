@@ -289,7 +289,15 @@ def main() -> int:
             )
             # 保存位置と実機位置がずれている場合に限り、全体走査へフォールバックする。
             # 通常は上の最短経路だけで済み、無限走査は行わない。
-            fallback = scan_directions(len(guild_order))
+            # 保存位置と実機位置がずれていると、前回位置を起点にした
+            # 方向探索が端へ進み続けることがある。まず右端から左側へ
+            # 戻す方向（画面上のスワイプは左→右）を走査し、その後に
+            # 逆方向も走査して、どちらの端から始まっても全カードを覆う。
+            fallback_steps = max(1, len(guild_order) - 1)
+            fallback = (
+                [((250, 400), (1100, 400))] * fallback_steps
+                + [((1100, 400), (250, 400))] * fallback_steps
+            )
             directions.extend(fallback)
             for page in range(len(directions) + 1):
                 try:
@@ -345,6 +353,12 @@ def main() -> int:
             # ボス詳細の閉じるボタンは固定ROIで検証済み。まず軽量な
             # テンプレート確認を行い、不要な画面往復を避ける。
             if screen in {"boss_detail", "withdraw_confirm"} and screen_matches and probe.target_visible(probe_label):
+                break
+            # ボス詳細は画面ID自体が「モンスター詳細」ヘッダーと固定ROIで
+            # 確定しており、閉じるボタンの文字テンプレートだけが描画中に
+            # 一時的に落ちることがある。座標は検証済みの固定値なので、
+            # boss_detail に限り画面ID確認を入力前提にする。
+            if screen == "boss_detail" and screen_matches:
                 break
             if dynamic_point is None:
                 dynamic_point = dynamic_close_point()
