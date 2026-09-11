@@ -13,6 +13,7 @@
 | AT-07 | OCR非依存 | 実行スクリプトのテンプレート専用経路 | OCRモデルを初期化せず、未一致時は安全停止 | `tests/test_live_selection_rules.py` と静的参照確認 |
 | AT-08 | 全ギルド走査 | 設定済み14ギルドの全開始位置・全目的位置 | 固定順序の走査で全組み合わせが目的位置へ到達 | `tests/test_live_selection_rules.py` |
 | AT-09 | 全カードテンプレート | 設定済み14ギルドのカード画像 | 全ギルドがASCII名テンプレートへ対応付く | `tests/test_live_selection_rules.py` |
+| AT-10 | テンプレート照合品質 | 保存済み実機キャプチャと14カード | 各カードの照合スコアが0.82以上 | `tests/test_live_selection_rules.py` |
 
 ## 実行コマンド
 

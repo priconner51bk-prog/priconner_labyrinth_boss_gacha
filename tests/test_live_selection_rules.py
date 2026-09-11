@@ -81,3 +81,31 @@ def test_all_configured_guilds_have_ascii_card_templates():
     }
     assert set(config["guilds"]) == set(names)
     assert all((ROOT / "data/template_migration/templates/guild_cards" / f"{slug}.png").is_file() for slug in names.values())
+
+
+def test_collected_guild_templates_match_their_source_captures():
+    import cv2
+
+    cases = [
+        ("guild_select_current_capture.png", ["mishoku", "twinkle_wish", "salendia"]),
+        ("guild_select_current_capture_02.png", ["royal_nightmare", "labyrinth", "carmina"]),
+        ("guild_select_current_capture_03.png", ["diabolos", "ranch_elizabeth", "mercurius"]),
+        ("guild_select_current_capture_04.png", ["twilight_caravan", "little_lyrical", "kaon"]),
+        ("guild_select_current_capture_05.png", [("kaon", 0), ("forestier", 2), ("lucent_academy", 3)]),
+    ]
+    for source_name, template_names in cases:
+        source = cv2.imread(str(ROOT / "data/observations/live" / source_name))
+        assert source is not None
+        for index, item in enumerate(template_names):
+            if isinstance(item, tuple):
+                template_name, card_index = item
+            else:
+                template_name, card_index = item, index
+            template = cv2.imread(
+                str(ROOT / "data/template_migration/templates/guild_cards" / f"{template_name}.png")
+            )
+            assert template is not None
+            # カード列はスワイプ途中の端数で数pxずれるため、画面全体から
+            # 最良位置を探し、固定座標への依存を避ける。
+            score = float(cv2.matchTemplate(source, template, cv2.TM_CCOEFF_NORMED).max())
+            assert score >= 0.82, (source_name, template_name, score)
