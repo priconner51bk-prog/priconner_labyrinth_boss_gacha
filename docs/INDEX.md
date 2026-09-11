@@ -17,14 +17,7 @@
 
 ## 内部監査・作業記録
 
-以下は通常利用者が実行時に読む資料ではなく、検証境界や作業状況を記録する資料です。
-
-- [Cloud作業の検証記録](CLOUD_AUDIT.md)
-- [Local入力契約](LOCAL_INPUT_CONTRACT.md)
-- [タスク分類・入力縮約の基準](TASK_REVIEW.md)
-- [タスク一覧](TASKS.md)
-- [公開情報入力テンプレート](PUBLISHING_INPUT_TEMPLATE.md)
-- [認証前公開チェックリスト](PUBLISHING_PREFLIGHT.md)
+内部監査・作業記録は公開配布物に含めません。ローカル作業時の資料は、公開インデックスから分離して管理してください。
 
 ## 使い分け
 
