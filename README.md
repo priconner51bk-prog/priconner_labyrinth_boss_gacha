@@ -46,13 +46,13 @@ docs/                           運用・開発手順
 
 ## 前提環境
 
-このリポジトリは単体で動作する構成です。別リポジトリは実行時に必要ありません。PaddleOCR、ADB、および本 README に記載するローカル設定が必要です。詳細は [実機運用手順](docs/OPERATIONS.md) を参照してください。
+このリポジトリは単体で動作する構成です。別リポジトリは実行時に必要ありません。ADB、OpenCV、および本 README に記載するローカル設定が必要です。詳細は [実機運用手順](docs/OPERATIONS.md) を参照してください。
 
 ## 環境整備手順
 
 ### 1. リポジトリを配置する
 
-このプロジェクトを任意の作業フォルダーへ clone します。設定、画面認識、ADB/OCR の実行基盤はすべてリポジトリ内に含まれます。
+このプロジェクトを任意の作業フォルダーへ clone します。設定、テンプレート画面認識、ADB の実行基盤はすべてリポジトリ内に含まれます。
 
 ```powershell
 git clone <公開リポジトリのURL>
@@ -164,7 +164,7 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 
 公開・運用を安定させるには、次の情報も README または `docs/` に残すと便利です。
 
-- 対応 Python、PaddleOCR、PaddlePaddle、OpenCV、Pydantic のバージョン
+- 対応 Python、OpenCV、Pydantic のバージョン
 - Windows・macOS・Linux ごとの BlueStacks 対応範囲と既知の制限
 - 画面解像度、DPI、ゲーム内表示倍率などの検証済み環境
 - `configs/` の各設定ファイルの役割と変更方法
