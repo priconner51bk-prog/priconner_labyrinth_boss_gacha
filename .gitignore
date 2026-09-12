@@ -46,3 +46,7 @@ model/
 config.local.*
 configs/local/
 secrets/
+
+# Distribution boundary: local-only runtime data is never published.
+local/*
+!local/README.md
