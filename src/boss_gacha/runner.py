@@ -110,8 +110,20 @@ class BossGachaRunner:
             self._progress(phase="reading_boss_names")
             names = measure("read_boss_names", self.read_boss_names)
             if names.get("_early_reject") == "true":
+                # Early rejection still consumes an attempt.  Previously the
+                # controller counter advanced only through evaluate(), so a
+                # stream of early rejects could bypass the attempt limit and
+                # produce an incorrect terminal status.
+                self.controller.attempts += 1
+                early_result = {"status": "max_attempts", "attempt": self.controller.attempts,
+                                "mismatches": {"_early_reject": True}}
                 measure("withdraw", self.withdraw)
                 self._progress(phase="retry", reason="early_reject")
+                if self.controller.attempts >= self.controller.policy.max_attempts:
+                    early_result["withdrawn"] = True
+                    early_result["max_attempts"] = self.controller.policy.max_attempts
+                    early_result["timing_summary"] = {key: self._summary(value) for key, value in phase_samples.items()}
+                    return early_result
                 if self.passport_count() <= 0:
                     return {"status": "safety_stop", "reason": "passport_count_exhausted",
                             "attempt": self.controller.attempts,

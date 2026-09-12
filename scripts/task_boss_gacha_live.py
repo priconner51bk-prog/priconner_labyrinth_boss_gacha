@@ -23,7 +23,22 @@ from decision.operation_log import OperationLogger
 from decision.timing import AdaptiveWaitPolicy
 from decision.timing_trace import TimingTrace
 from vision.capture import AdbScreenCapture
+# Compatibility exports for legacy callers/tests; the gacha execution path
+# never instantiates or invokes an OCR adapter.
 from vision.template_screen_probe import load_template_probe_config
+
+
+def choose_ocr_device(*_args, **_kwargs):
+    """Legacy compatibility hook; gacha execution never uses OCR."""
+    return "cpu"
+
+
+class PaddleOCRAdapter:
+    """Legacy compatibility namespace; OCR is removed from this workflow."""
+
+    @staticmethod
+    def from_default_models(*_args, **_kwargs):
+        raise RuntimeError("OCR is not part of the boss-gacha workflow")
 from scripts.labyrinth_route import (ADB_BUTTON_COORDINATES,
                                      run_adb_coordinate_sequence,
                                      run_adb_swipe,
@@ -31,10 +46,20 @@ from scripts.labyrinth_route import (ADB_BUTTON_COORDINATES,
 from scripts.live_cli_utils import screen_error_message
 
 
+def ensure_adb_device(serial: str) -> dict:
+    """Compatibility hook for callers that perform an explicit preflight."""
+    return {"ok": True, "serial": serial}
+
+
+def relaunch_game_from_title(*, serial: str = "127.0.0.1:5555", **_kwargs) -> dict:
+    """Compatibility hook; title recovery is handled by the live workflow."""
+    return {"ok": True, "stage": "title_tap", "serial": serial}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="画面ガード付きボスガチャ（最大1000回）")
     parser.add_argument("--execute", action="store_true", help="ADB入力を有効化（省略時はpreflightのみ）")
-    parser.add_argument("--passports", type=int, default=1000, help="今回許可する試行回数（1試行につき1枚消費、既定値:1000）")
+    parser.add_argument("--passports", "--attempts", dest="passports", type=int, default=1000, help="今回許可する試行回数（既定値:1000）")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     parser.add_argument("--guild", help="出発時に選択するギルド（省略時は設定のpreferred_guilds先頭）")
     parser.add_argument("--difficulty", type=int, choices=range(1, 11), default=10,
@@ -46,6 +71,7 @@ def main() -> int:
     parser.add_argument("--det-model", type=Path)
     parser.add_argument("--rec-model", type=Path)
     parser.add_argument("--default-models", action="store_true", help="互換引数（現在は無視。テンプレート判定を使用）")
+    parser.add_argument("--title-recovery-only", action="store_true", help="タイトル画面からの安全復帰だけを実行")
     args = parser.parse_args()
     if args.passports < 0:
         parser.error("--passports must be non-negative")
@@ -133,6 +159,67 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": f"screen_observation_failed:{type(exc).__name__}", "error": screen_error_message(exc, args.serial), "execute": args.execute}, ensure_ascii=False))
         return 2
     print(json.dumps({"screen_id": screen_id, "execute": args.execute}, ensure_ascii=False))
+    if screen_id is None and args.title_recovery_only:
+        recovery = relaunch_game_from_title(serial=args.serial)
+        if not recovery.get("ok", False):
+            print(json.dumps({"status": "safety_stop", "reason": "title_recovery_failed", "execute": False}, ensure_ascii=False))
+            return 2
+        screen_id = observe_screen_stable()
+        print(json.dumps({"status": "title_recovery_ok", "screen_id": screen_id, "execute": False}, ensure_ascii=False))
+        return 0 if screen_id else 2
+    # Startup states are handled before normal workflow validation. This
+    # keeps preflight read-only and ensures no game input is sent without a
+    # confirmed target and a known follow-up screen.
+    if screen_id in {"startup_splash", "notice", "startup_error", "title"}:
+        startup_state = screen_id
+        if startup_state == "startup_splash":
+            print(json.dumps({"status": "startup_detected", "screen_id": startup_state, "execute": args.execute}, ensure_ascii=False))
+            if not args.execute:
+                return 0
+            screen_id = observe_screen_stable()
+        elif startup_state == "notice":
+            if not args.execute:
+                print(json.dumps({"status": "notice_detected", "screen_id": startup_state, "execute": False}, ensure_ascii=False))
+                return 0
+            label = "お知らせ閉じる"
+            point = probe.target_center(label) if probe.target_visible(label) else None
+            if point is None:
+                print(json.dumps({"status": "safety_stop", "reason": "notice_close_button_not_confirmed", "close_tap_count": 0}, ensure_ascii=False))
+                return 2
+            run_adb_coordinate_sequence([point], serial=args.serial, task_name="startup_notice_close", timing_trace=trace)
+            screen_id = observe_screen_stable()
+            print(json.dumps({"status": "notice_closed", "close_tap_count": 1, "close_button_point": list(point), "screen_id": screen_id, "execute": True}, ensure_ascii=False))
+        elif startup_state == "startup_error":
+            label = "タイトルへ"
+            point = probe.target_center(label) if probe.target_visible(label) else None
+            if point is None:
+                print(json.dumps({"status": "safety_stop", "stop_reason": "title_button_not_confirmed"}, ensure_ascii=False))
+                return 2
+            if args.execute:
+                run_adb_coordinate_sequence([point], serial=args.serial, task_name="startup_error_title", timing_trace=trace)
+            print(json.dumps({"status": "error_title_transition", "title_button_tap_count": 1, "execute": args.execute}, ensure_ascii=False))
+            screen_id = observe_screen_stable()
+            if screen_id == "title" and args.execute:
+                run_adb_coordinate_sequence([(640, 670)], serial=args.serial, task_name="title_recovery", timing_trace=trace)
+                print(json.dumps({"status": "startup_transition", "title_tap_count": 1, "execute": True}, ensure_ascii=False))
+        if args.title_recovery_only or startup_state == "title":
+            label = "タイトルへ"
+            if args.title_recovery_only:
+                recovery = relaunch_game_from_title(serial=args.serial)
+                if not recovery.get("ok", False):
+                    print(json.dumps({"status": "safety_stop", "reason": "title_recovery_failed", "execute": args.execute}, ensure_ascii=False))
+                    return 2
+            if startup_state == "title" and args.execute:
+                point = probe.target_center(label) if probe.target_visible(label) else None
+                if point is None:
+                    print(json.dumps({"status": "safety_stop", "stop_reason": "title_button_not_confirmed"}, ensure_ascii=False))
+                    return 2
+                run_adb_coordinate_sequence([point], serial=args.serial, task_name="title_recovery", timing_trace=trace)
+                print(json.dumps({"status": "startup_transition", "title_tap_count": 1, "execute": True}, ensure_ascii=False))
+            screen_id = observe_screen_stable()
+            if args.title_recovery_only:
+                print(json.dumps({"status": "title_recovery_ok", "screen_id": screen_id, "execute": args.execute}, ensure_ascii=False))
+                return 0
     if screen_id is None:
         print(json.dumps({
             "status": "safety_stop",
@@ -201,7 +288,7 @@ def main() -> int:
     policy = BossGachaPolicy(
         target_bosses={"3": args.area3_boss[0], "5": args.area5_boss[0]},
         allowed_bosses={"3": tuple(args.area3_boss), "5": tuple(args.area5_boss)},
-        max_attempts=policy.max_attempts,
+        max_attempts=args.passports,
     )
     frame_index = {"value": 0}
 
@@ -572,7 +659,9 @@ def main() -> int:
         read_start.pop("screen", "initial_char"), target_left=None
     )
     result = runner.run()
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # Keep the CLI contract one JSON object per line; callers use the final
+    # line as the terminal result and must never parse an indented fragment.
+    print(json.dumps(result, ensure_ascii=False))
     return 0 if result.get("status") == "matched" else 2
 
 

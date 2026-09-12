@@ -318,11 +318,22 @@ def run_adb_swipe(
     actual_start = scaler.point(start)
     actual_end = scaler.point(end)
     started = time.monotonic()
-    subprocess.run(
-        [adb_command, "-s", serial, "shell", "input", "swipe",
-         str(actual_start[0]), str(actual_start[1]), str(actual_end[0]), str(actual_end[1]), str(duration_ms)],
-        check=True, capture_output=True, text=True,
-    )
+    command = [
+        adb_command, "-s", serial, "shell", "input", "swipe",
+        str(actual_start[0]), str(actual_start[1]), str(actual_end[0]),
+        str(actual_end[1]), str(duration_ms),
+    ]
+    last_error = None
+    for attempt in range(3):
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)
+            last_error = None
+            break
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+            time.sleep(0.1 * (attempt + 1))
     if timing_trace is not None:
         timing_trace.record("adb_swipe_total", (time.monotonic() - started) * 1000,
                             start=list(actual_start), end=list(actual_end), duration_ms=duration_ms)
@@ -382,6 +393,9 @@ def scan_map_layout(
     return "安全停止: マップ左端へ復帰できません"
 
 
+MAX_DEBUG_CAPTURE_PAIRS = 100
+
+
 def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, serial: str = ADB_SERIAL) -> Path:
     """タップ直前画面に予定座標を描画して保存する検証用処理。"""
     from PIL import Image, ImageDraw
@@ -389,7 +403,9 @@ def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, s
 
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    index = len(list(destination.glob(f"{prefix}_*.png"))) + 1
+    index = len(list(destination.glob(f"{prefix}_*_source.png"))) + 1
+    if index > MAX_DEBUG_CAPTURE_PAIRS:
+        raise RuntimeError(f"デバッグ証跡上限到達: {prefix}")
     source = destination / f"{prefix}_{index:04d}_source.png"
     overlay = destination / f"{prefix}_{index:04d}.png"
     AdbScreenCapture(serial=serial).capture(source)

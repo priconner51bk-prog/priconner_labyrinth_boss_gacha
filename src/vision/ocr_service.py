@@ -37,6 +37,8 @@ def _exchange(request: dict[str, Any], *, timeout: float = 120.0) -> dict[str, A
 
 def ensure_server(*, startup_timeout: float = 30.0) -> None:
     """サーバーがなければ1回だけバックグラウンド起動する。"""
+    if not SERVER.is_file():
+        raise RuntimeError("ocr_service_server_unavailable")
     try:
         _exchange({"op": "ping"}, timeout=0.5)
         return

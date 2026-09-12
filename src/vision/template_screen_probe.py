@@ -9,6 +9,7 @@ from typing import Mapping
 import json
 
 import cv2
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,14 @@ class AdbTemplateScreenProbe:
         boss_detail = self.screens.get("boss_detail")
         if boss_detail is not None and self._score(image, boss_detail, boss_detail) >= self.threshold:
             return "boss_detail"
+        # Screen templates are authoritative headers; check them before
+        # dynamic button templates (a card can contain a visually identical
+        # button ROI).
+        for screen_id, reference in self.screens.items():
+            if screen_id in {"ex_equipment_conflict", "boss_detail"}:
+                continue
+            if self._score(image, reference, reference) >= self.threshold:
+                return screen_id
         for screen_id, label in (("guild_select", "フォレスティエ"), ("quest_menu", "ラビリンス"),
                                  ("labyrinth_top", "挑戦中"), ("labyrinth_top", "出発"),
                                  ("boss_map", "左BOSS"), ("boss_map", "右BOSS"),
@@ -148,6 +157,36 @@ class AdbTemplateScreenProbe:
         scores = {name: self._score(image, ref, ref) for name, ref in self.screens.items()}
         name, score = max(scores.items(), key=lambda item: item[1])
         return name if score >= self.threshold else None
+
+    @staticmethod
+    def _is_notice_screen(image) -> bool:
+        """Recognize the stable amber notice header used during startup."""
+        if image is None or getattr(image, "ndim", 0) != 3:
+            return False
+        h, w = image.shape[:2]
+        if h < 100 or w < 500:
+            return False
+        band = image[max(0, int(h*.04)):int(h*.11), int(w*.03):int(w*.97)]
+        mean = band.reshape(-1, 3).mean(axis=0)
+        return bool(mean[0] > 150 and mean[1] > 90 and mean[2] < 130 and (mean[0]-mean[2]) > 50)
+
+    @staticmethod
+    def _is_startup_splash(image) -> bool:
+        """Recognize a bright screen with a dark centered splash panel."""
+        if image is None or getattr(image, "ndim", 0) != 3:
+            return False
+        h, w = image.shape[:2]
+        if h < 500 or w < 800:
+            return False
+        center = image[int(h*.40):int(h*.60), int(w*.28):int(w*.72)]
+        outer = np.concatenate((image[:int(h*.25)].reshape(-1, 3), image[int(h*.75):].reshape(-1, 3)))
+        return bool(center.mean() < 70 and outer.mean() > 180)
+
+    def target_center(self, label: str) -> tuple[int, int] | None:
+        region = self.targets.get(label)
+        if region is None:
+            return None
+        return ((region.left + region.right) // 2, (region.top + region.bottom) // 2)
 
     def observe_screen(self) -> str | None:
         return self._classify(self._capture())
