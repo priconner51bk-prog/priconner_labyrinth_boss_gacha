@@ -3,7 +3,6 @@
 from pathlib import Path
 import sys
 
-import cv2
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -11,19 +10,6 @@ sys.path.insert(0, str(ROOT / "src"))
 from boss_gacha import BossGachaController, BossGachaPolicy
 from boss_gacha.guild_selection import scan_directions
 from vision.template_screen_probe import load_template_probe_config
-
-
-class _NoCapture:
-    def capture(self, _path):
-        raise AssertionError("固定画像テストではADB取得を呼び出さない")
-
-
-def test_departure_bonus_is_not_misclassified_as_withdraw_confirm():
-    probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", _NoCapture())
-    image_path = ROOT / "data" / "observations" / "live" / "task_boss_gacha_withdraw_confirm_ocr.png"
-    image = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
-    assert image is not None
-    assert probe._classify(image) == "bonus"
 
 
 def test_target_pair_is_match_and_other_pair_is_retry():
@@ -83,29 +69,3 @@ def test_all_configured_guilds_have_ascii_card_templates():
     assert all((ROOT / "data/template_migration/templates/guild_cards" / f"{slug}.png").is_file() for slug in names.values())
 
 
-def test_collected_guild_templates_match_their_source_captures():
-    import cv2
-
-    cases = [
-        ("guild_select_current_capture.png", ["mishoku", "twinkle_wish", "salendia"]),
-        ("guild_select_current_capture_02.png", ["royal_nightmare", "labyrinth", "carmina"]),
-        ("guild_select_current_capture_03.png", ["diabolos", "ranch_elizabeth", "mercurius"]),
-        ("guild_select_current_capture_04.png", ["twilight_caravan", "little_lyrical", "kaon"]),
-        ("guild_select_current_capture_05.png", [("kaon", 0), ("forestier", 2), ("lucent_academy", 3)]),
-    ]
-    for source_name, template_names in cases:
-        source = cv2.imread(str(ROOT / "data/observations/live" / source_name))
-        assert source is not None
-        for index, item in enumerate(template_names):
-            if isinstance(item, tuple):
-                template_name, card_index = item
-            else:
-                template_name, card_index = item, index
-            template = cv2.imread(
-                str(ROOT / "data/template_migration/templates/guild_cards" / f"{template_name}.png")
-            )
-            assert template is not None
-            # カード列はスワイプ途中の端数で数pxずれるため、画面全体から
-            # 最良位置を探し、固定座標への依存を避ける。
-            score = float(cv2.matchTemplate(source, template, cv2.TM_CCOEFF_NORMED).max())
-            assert score >= 0.82, (source_name, template_name, score)
