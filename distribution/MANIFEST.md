@@ -1,7 +1,7 @@
 # 配布最小構成マニフェスト
 
-生成物: `distribution/priconner_labyrinth_boss_gacha_minimal_final.zip`
-検査結果: 229エントリ、ライブ画像61件、除外対象混入なし。
+生成物: `distribution/priconner_labyrinth_boss_gacha_minimal_final_v2.zip`
+検査結果: 230エントリ、設定参照62件、除外対象混入なし。
 
 ## ZIP配布対象
 
