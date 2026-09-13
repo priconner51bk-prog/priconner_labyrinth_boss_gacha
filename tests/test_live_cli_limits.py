@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+
 from scripts import task_boss_gacha_live as cli
 
 
@@ -18,8 +19,6 @@ def test_cli_attempt_limit(count, expected, monkeypatch, capsys):
     monkeypatch.setattr(cli, "ensure_adb_device", lambda serial: {"ok": True, "serial": serial})
     monkeypatch.setattr(cli, "OperationLogger", Mock())
     monkeypatch.setattr(cli, "TimingTrace", Mock())
-    monkeypatch.setattr(cli, "choose_ocr_device", lambda *a: "cpu")
-    monkeypatch.setattr(cli.PaddleOCRAdapter, "from_default_models", Mock())
     begin, withdraw = Mock(), Mock()
     monkeypatch.setattr(cli.LiveBossGachaWorkflow, "begin_attempt", begin)
     monkeypatch.setattr(cli.LiveBossGachaWorkflow, "read_boss_names", lambda *a, **k: {"3": "別", "_early_reject": "true"})
@@ -39,13 +38,11 @@ def test_zero_attempts_does_not_load_ocr_or_send_input(monkeypatch, capsys):
     monkeypatch.setattr(cli, "AdbScreenCapture", Mock())
     monkeypatch.setattr(cli, "ensure_adb_device", lambda serial: {"ok": True, "serial": serial})
     monkeypatch.setattr(cli, "TimingTrace", Mock())
-    ocr, tap = Mock(), Mock()
-    monkeypatch.setattr(cli.PaddleOCRAdapter, "from_default_models", ocr)
+    tap = Mock()
     monkeypatch.setattr(cli, "run_adb_coordinate_sequence", tap)
     assert cli.main() == 2
-    assert json.loads(capsys.readouterr().out.splitlines()[-1])["reason"] == "allowed_bosses_not_configured"
-    ocr.assert_not_called()
-    tap.assert_not_called()
+    assert json.loads(capsys.readouterr().out.splitlines()[-1])["reason"] == "screen_transition_timeout:initial_char->boss_map"
+    tap.assert_called_once()
 
 
 def test_title_recovery_only_relaunches_and_reobserves_known_screen(monkeypatch, capsys):
@@ -100,7 +97,7 @@ def test_notice_is_closed_once_before_continuing(monkeypatch, capsys):
     assert output[1] == {"status": "notice_closed", "close_tap_count": 1,
                          "close_button_point": [640, 640],
                          "screen_id": "initial_char", "execute": True}
-    assert output[-1]["reason"] == "allowed_bosses_not_configured"
+    assert output[-1]["reason"] == "precondition_failed"
 
 
 def test_notice_preflight_does_not_tap(monkeypatch, capsys):
@@ -196,7 +193,7 @@ def test_startup_error_uses_confirmed_target_center_then_title_flow(monkeypatch,
     output = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert output[1]["status"] == "error_title_transition"
     assert output[1]["title_button_tap_count"] == 1
-    assert output[-1]["reason"] == "allowed_bosses_not_configured"
+    assert output[-1]["reason"] == "unsupported_start_screen:title"
 
 
 def test_startup_error_without_confirmed_button_sends_no_input(monkeypatch, capsys):

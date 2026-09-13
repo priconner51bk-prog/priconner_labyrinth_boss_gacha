@@ -5,45 +5,37 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import re
+import subprocess
 import sys
 import time
+from pathlib import Path
 
 SUBPROJECT = Path(__file__).resolve().parents[1]
 ROOT = SUBPROJECT
 sys.path.insert(0, str(SUBPROJECT / "src"))
 sys.path.insert(0, str(SUBPROJECT))
 
-from boss_gacha import (BossGachaController, BossGachaPhaseCoordinator,
-                        BossGachaPolicy, LiveBossGachaWorkflow,
-                        GuardedLiveActions)
-from boss_gacha.guild_selection import guild_button_point, scan_directions
+from boss_gacha import (
+    BossGachaController,
+    BossGachaPhaseCoordinator,
+    BossGachaPolicy,
+    GuardedLiveActions,
+    LiveBossGachaWorkflow,
+)
+from boss_gacha.guild_selection import scan_directions
 from decision.operation_log import OperationLogger
 from decision.timing import AdaptiveWaitPolicy
 from decision.timing_trace import TimingTrace
-from vision.capture import AdbScreenCapture
-# Compatibility exports for legacy callers/tests; the gacha execution path
-# never instantiates or invokes an OCR adapter.
-from vision.template_screen_probe import load_template_probe_config
-
-
-def choose_ocr_device(*_args, **_kwargs):
-    """Legacy compatibility hook; gacha execution never uses OCR."""
-    return "cpu"
-
-
-class PaddleOCRAdapter:
-    """Legacy compatibility namespace; OCR is removed from this workflow."""
-
-    @staticmethod
-    def from_default_models(*_args, **_kwargs):
-        raise RuntimeError("OCR is not part of the boss-gacha workflow")
-from scripts.labyrinth_route import (ADB_BUTTON_COORDINATES,
-                                     run_adb_coordinate_sequence,
-                                     run_adb_swipe,
-                                     screen_coordinate)
+from scripts.labyrinth_route import (
+    ADB_BUTTON_COORDINATES,
+    run_adb_coordinate_sequence,
+    run_adb_swipe,
+    screen_coordinate,
+)
 from scripts.live_cli_utils import screen_error_message
+from vision.capture import AdbScreenCapture
+from vision.template_screen_probe import load_template_probe_config
 
 
 def ensure_adb_device(serial: str) -> dict:
@@ -103,7 +95,7 @@ def main() -> int:
             screenshot_hashes.add(digest)
             pending.replace(path)
             return path
-        except Exception as exc:
+        except (OSError, subprocess.SubprocessError, ValueError, TypeError) as exc:
             pending.unlink(missing_ok=True)
             print(json.dumps({
                 "nonfatal_capture_error": {
@@ -233,8 +225,24 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": "passport_count_not_positive"}, ensure_ascii=False))
         return 2
     if not args.area3_boss or not args.area5_boss:
-        print(json.dumps({"status": "safety_stop", "reason": "allowed_bosses_not_configured"}, ensure_ascii=False))
-        return 2
+        policy_path = ROOT / "configs" / "labyrinth_target_policy.json"
+        try:
+            policy_data = json.loads(policy_path.read_text(encoding="utf-8"))
+            configured_targets = policy_data["target_bosses"]
+            if not isinstance(configured_targets, dict):
+                raise TypeError("target_bosses must be an object")
+            if not args.area3_boss:
+                args.area3_boss = [str(configured_targets["3"])]
+            if not args.area5_boss:
+                args.area5_boss = [str(configured_targets["5"])]
+        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+            print(json.dumps({
+                "status": "safety_stop",
+                "reason": "allowed_bosses_not_configured",
+                "config": str(policy_path),
+                "error_type": type(exc).__name__,
+            }, ensure_ascii=False))
+            return 2
 
     # ギルドは設定を唯一の既定値とし、CLI指定で上書きする。座標・表示テンプレートが
     # 未登録のギルドは tap() が安全停止するため、未確認座標を推測して入力しない。
@@ -244,7 +252,7 @@ def main() -> int:
         guild_data = json.loads(guild_config.read_text(encoding="utf-8"))
         preferred = guild_data.get("selection_policy", {}).get("preferred_guilds", [])
         default_guild = str(preferred[0]).strip() if preferred else "フォレスティエ"
-    except Exception as exc:
+    except (OSError, ValueError, TypeError, AttributeError, IndexError) as exc:
         default_guild = "フォレスティエ"
         print(json.dumps({
             "nonfatal_config_error": {
@@ -530,7 +538,7 @@ def main() -> int:
         try:
             started = time.perf_counter()
             run_adb_coordinate_sequence([point], serial=args.serial, healthcheck=True,
-                                        timing_policy=AdaptiveWaitPolicy(minimum_seconds=0.05, poll_seconds=0.03, timeout_seconds=1.5), screen_probe=probe.observe_screen,
+                                        timing_policy=AdaptiveWaitPolicy(minimum_seconds=0.05, poll_seconds=0.03, timeout_seconds=4.0), screen_probe=probe.observe_screen,
                                         debug_capture_dir=live_dir, debug_capture_prefix=f"task_boss_gacha_{label}",
                                         timing_trace=trace, previous_screen_token=screen)
             operation_log.record(task="task_boss_gacha", purpose=label, screen_before=screen,
