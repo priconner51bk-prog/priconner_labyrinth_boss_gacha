@@ -4,12 +4,41 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+LOCK_DIR = ROOT / "data/observations/live"
+
+
+def _device_lock(serial: str) -> Path:
+    safe_serial = re.sub(r"[^A-Za-z0-9_.-]+", "_", serial)
+    return LOCK_DIR / f".device_{safe_serial}.lock"
+
+
+def _acquire_device_lock(serial: str) -> Path | None:
+    LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    path = _device_lock(serial)
+    try:
+        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        with os.fdopen(descriptor, "w", encoding="ascii", newline="\n") as stream:
+            stream.write(str(os.getpid()))
+    except FileExistsError:
+        try:
+            owner = int(path.read_text(encoding="ascii").strip())
+            os.kill(owner, 0)
+        except (FileNotFoundError, ValueError, OSError):
+            path.unlink(missing_ok=True)
+            descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(descriptor, "w", encoding="ascii", newline="\n") as stream:
+                stream.write(str(os.getpid()))
+        else:
+            return None
+    return path
 
 
 def _run(script: str, serial: str) -> dict[str, object]:
@@ -47,7 +76,7 @@ def _wait_for_startup_state(serial: str, timeout: float = 45.0) -> dict[str, obj
     return last
 
 
-def main() -> int:
+def _run_main() -> int:
     parser = argparse.ArgumentParser(description="アプリ再起動からラビリンス入口まで誘導")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     parser.add_argument("--package", default="jp.co.cygames.princessconnectredive")
@@ -88,6 +117,18 @@ def main() -> int:
             return 2
     print(json.dumps({"status": "completed", "screen_after": "labyrinth_top", "steps": steps}, ensure_ascii=False))
     return 0
+
+
+def main() -> int:
+    serial = next((sys.argv[index + 1] for index, value in enumerate(sys.argv[:-1]) if value == "--serial"), "127.0.0.1:5555")
+    lock = _acquire_device_lock(serial)
+    if lock is None:
+        print(json.dumps({"status": "safety_stop", "reason": "device_busy", "serial": serial}, ensure_ascii=False))
+        return 2
+    try:
+        return _run_main()
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
