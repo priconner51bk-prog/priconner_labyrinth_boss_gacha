@@ -29,7 +29,7 @@ R-07、R-08は完了済みです。R-09は公開対象・ローカル専用・�
 | グループ | 対象 | 状態 |
 | --- | --- | --- |
 | 入口 | `labyrinth_top`、`quest_menu`、`guild_select`、`guild_confirm` | `quest_menu`、`guild_select` 完了。残り確認 |
-| ダイアログ | `bonus`、`item_reward`、`withdraw_confirm`、`move_confirm`、`event_confirm` | `item_reward` 一部完了。残り確認 |
+| ガチャ前後ダイアログ | `bonus`、`item_reward`、`withdraw_confirm` | ガチャ開始前後と対象外時の撤退確認に限定。戦闘・ショップ・イベント用ダイアログは対象外 |
 | ボス・マップ | `boss_map`、`boss_detail`、`左BOSS`、`右BOSS`、`撤退する` | `boss_map` 一部完了。残り確認 |
 | ガチャ関連 | `boss_map`、`boss_detail`、`withdraw_confirm`、`guild_*` | ガチャ提供に必要な対象だけを確認。戦闘・報酬・ショップ・イベント系は対象外 |
 
