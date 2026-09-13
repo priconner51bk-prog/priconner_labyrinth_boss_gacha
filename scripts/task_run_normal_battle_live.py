@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
+
 import cv2
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,22 +23,16 @@ from vision.template_screen_probe import load_template_probe_config
 
 
 def _pass_confirmation_visible(capture: AdbScreenCapture) -> bool:
-    """Return true only for the explicit pass-confirmation dialog."""
-    frame = ROOT / "data/observations/live/task_pass_confirmation_guard.png"
-    capture.capture(frame)
-    try:
-        text = "".join(line.text for line in OCRServiceAdapter(language="jpn").recognize(str(frame)))
-    except Exception:
-        return False
-    compact = text.replace(" ", "")
-    return "パス確認" in compact or "このバトルをパス" in compact
+    """No OCR fallback exists; unregistered pass dialogs are not actionable."""
+    return False
 
 
 def _wait_for_party_screen(capture: AdbScreenCapture, timeout: float = 8.0) -> bool:
-    """Wait for a fresh party-screen OCR proof after 挑戦する."""
+    """Wait for a fresh registered party-screen template after 挑戦する."""
+    probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if _battle_party_by_ocr(capture):
+        if probe.observe_screen() in {"battle_party", "battle_party_ready"}:
             return True
         time.sleep(0.35)
     return False
@@ -182,13 +177,13 @@ def _battle_party_by_ocr(capture: AdbScreenCapture) -> bool:
             device=choose_ocr_device("gpu:0"), language="jpn"
         ).recognize(str(frame))
         texts.append("".join(line.text for line in lines))
-    except Exception:
-        pass
+    except Exception as exc:
+        print(json.dumps({"nonfatal_probe_error": "battle_party_paddle_ocr", "error_type": type(exc).__name__}, ensure_ascii=False), file=sys.stderr)
     try:
         lines = OCRServiceAdapter(language="jpn").recognize(str(frame))
         texts.append("".join(line.text for line in lines))
-    except Exception:
-        pass
+    except Exception as exc:
+        print(json.dumps({"nonfatal_probe_error": "battle_party_service_ocr", "error_type": type(exc).__name__}, ensure_ascii=False), file=sys.stderr)
     text = "".join(texts).replace(" ", "")
     # Character-invite screens also have a large blue lower-right button.
     # Their invite wording is authoritative evidence that this is not a
@@ -466,7 +461,7 @@ def main() -> int:
             if args.equipment_only:
                 print(json.dumps({"status": "equipment_ready", "screen": "battle_party"}, ensure_ascii=False))
                 return 0
-            final_members = _assert_party_slots_filled(capture, required=target_members)
+            _assert_party_slots_filled(capture, required=target_members)
             if not probe.target_visible("バトル開始"):
                 raise RuntimeError("ex_equipment_target_not_confirmed")
             _tap(probe, (1135, 605), prefix="task_normal_battle_start", serial=args.serial, previous=screen)
@@ -522,7 +517,7 @@ def main() -> int:
         if args.equipment_only:
             print(json.dumps({"status": "equipment_ready", "screen": screen}, ensure_ascii=False))
             return 0
-        final_members = _assert_party_slots_filled(capture, required=target_members)
+        _assert_party_slots_filled(capture, required=target_members)
         try:
             _tap(probe, (1135, 605), prefix="task_normal_battle_start", serial=args.serial, previous=screen)
         except Exception:
