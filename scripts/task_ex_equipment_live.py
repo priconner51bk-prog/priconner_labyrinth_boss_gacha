@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import cv2
 
@@ -16,7 +16,6 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
 from vision.template_screen_probe import load_template_probe_config
 
 
@@ -47,70 +46,6 @@ def _checkbox_checked(capture: AdbScreenCapture) -> bool:
     return float((blue > 0).mean()) >= 0.035
 
 
-def _ex_equipment_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_ex_equipment_ocr.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines)
-    return "EX装備" in text and ("おまかせ装備" in text or "装備確定" in text)
-
-
-def _priority_picker_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_ex_priority_picker_resume.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    return "優先ステータス" in "".join(line.text.replace(" ", "") for line in lines)
-
-
-def _ex_auto_dialog_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_ex_auto_dialog_resume.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines)
-    return "おまかせEX装備設定" in text and "全て" in text
-
-
-def _equipment_conflict_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_ex_conflict_resume.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines)
-    return "他キャラが装備中" in text and "EX装備" in text
-
-
-def _battle_party_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_battle_party_resume.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines)
-    return "バトル開始" in text or ("パーティ" in text and "編成" in text)
-
-
 def _battle_party_by_layout(capture: AdbScreenCapture) -> bool:
     """Fallback for stylized/garbled OCR on the party screen."""
     frame = ROOT / "data/observations/live/task_battle_party_layout_ex.png"
@@ -126,18 +61,13 @@ def _battle_party_by_layout(capture: AdbScreenCapture) -> bool:
 def _all_priority_is_physical(capture: AdbScreenCapture) -> bool:
     frame = ROOT / "data/observations/live/task_ex_priority_state.png"
     capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
+    image = cv2.imread(str(frame), cv2.IMREAD_COLOR)
+    if image is None or image.shape[0] < 370 or image.shape[1] < 430:
         return False
-    row_text = "".join(
-        line.text.replace(" ", "")
-        for line in lines
-        if 200 <= line.bbox[1] <= 285
-    )
-    return "全て" in row_text and "物理防御貫通" in row_text
+    roi = cv2.cvtColor(image[300:365, 355:420], cv2.COLOR_BGR2HSV)
+    blue = ((roi[:, :, 0] > 90) & (roi[:, :, 0] < 135)
+            & (roi[:, :, 1] > 70) & (roi[:, :, 2] > 100))
+    return float(blue.mean()) >= 0.12
 
 
 def _set_all_priority_physical(capture: AdbScreenCapture, *, serial: str) -> None:
@@ -160,16 +90,8 @@ def main() -> int:
     capture = AdbScreenCapture(serial=args.serial)
     probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     screen = probe.observe_screen()
-    if screen in {"notice", "boss_map"} and (_battle_party_by_ocr(capture) or _battle_party_by_layout(capture)):
+    if screen in {"notice", "boss_map"} and _battle_party_by_layout(capture):
         screen = "battle_party"
-    elif screen == "notice" and _ex_equipment_by_ocr(capture):
-        screen = "ex_equipment"
-    elif screen == "notice" and _priority_picker_by_ocr(capture):
-        screen = "priority_picker"
-    elif screen == "notice" and _ex_auto_dialog_by_ocr(capture):
-        screen = "ex_auto_dialog"
-    elif screen == "notice" and _equipment_conflict_by_ocr(capture):
-        screen = "ex_equipment_conflict"
     if screen == "priority_picker":
         try:
             run_adb_coordinate_sequence(
@@ -187,7 +109,7 @@ def main() -> int:
             screen = probe.observe_screen()
             if screen != "ex_auto_dialog":
                 raise RuntimeError(f"unexpected_ex_auto_after_priority:{screen}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
             print(json.dumps({"status": "safety_stop", "reason": f"priority_resume_failed:{type(exc).__name__}"}, ensure_ascii=False))
             return 2
     if screen not in {"battle_party", "battle_party_ready", "ex_equipment", "ex_auto_dialog", "ex_equipment_conflict"}:
@@ -219,8 +141,6 @@ def main() -> int:
             if not _checkbox_checked(capture):
                 raise RuntimeError("other_characters_checkbox_not_checked")
         screen = _tap(probe, (785, 638), screen, "task_ex_equipment_ok", args.serial)
-        if screen == "notice" and _equipment_conflict_by_ocr(capture):
-            screen = "ex_equipment_conflict"
         # 通常は装備画面に戻り、競合がある場合だけ警告画面として
         # 認識される。どちらも安全な出口を明示する。
         if screen == "ex_equipment_conflict":
@@ -229,11 +149,9 @@ def main() -> int:
             screen = _tap(probe, (1085, 640), screen, "task_ex_equipment_confirm", args.serial)
         else:
             raise RuntimeError(f"unexpected_ex_equipment_result:{screen}")
-        if screen == "notice" and _battle_party_by_ocr(capture):
-            screen = "battle_party"
         if screen not in {"battle_party", "battle_party_ready"}:
             raise RuntimeError(f"unexpected_party_after_equipment:{screen}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"tap_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "equipment_ready", "screen": screen}, ensure_ascii=False))
