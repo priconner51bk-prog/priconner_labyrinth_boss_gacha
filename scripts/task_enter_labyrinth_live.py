@@ -13,11 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _run(script: str, serial: str) -> dict[str, object]:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / script), "--serial", serial],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=90,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / script), "--serial", serial],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=45,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"script": script, "returncode": 124, "status": "safety_stop", "reason": "step_timeout"}
     lines = [line for line in result.stdout.splitlines() if line.strip()]
     payload: dict[str, object] = {"script": script, "returncode": result.returncode}
     if lines:
