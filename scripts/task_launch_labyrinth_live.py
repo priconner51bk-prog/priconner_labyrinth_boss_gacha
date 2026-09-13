@@ -1,12 +1,12 @@
-"""ホーム画面からクエスト入口をOCR確認してラビリンスへ進む。"""
+"""ホーム画面から固定ROIテンプレートでラビリンス入口へ進む。"""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import cv2
 
@@ -17,8 +17,19 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr_service import OCRServiceAdapter
 from vision.template_screen_probe import load_template_probe_config
+
+
+def _locate(image, template_path: Path, *, left: int, top: int, right: int, bottom: int) -> tuple[int, int] | None:
+    roi = image[top:bottom, left:right]
+    template = cv2.imread(str(template_path), cv2.IMREAD_COLOR)
+    if template is None or roi.shape[0] < template.shape[0] or roi.shape[1] < template.shape[1]:
+        return None
+    result = cv2.matchTemplate(roi, template, cv2.TM_CCOEFF_NORMED)
+    _, score, _, point = cv2.minMaxLoc(result)
+    if score < 0.75:
+        return None
+    return (left + point[0] + template.shape[1] // 2, top + point[1] + template.shape[0] // 2)
 
 
 def main() -> int:
@@ -32,7 +43,6 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": "already_in_labyrinth", "screen_id": current_screen}, ensure_ascii=False))
         return 2
     source = ROOT / "data/observations/live/task_launch_source.png"
-    roi_path = ROOT / "data/observations/live/task_launch_bottom_roi.png"
     # quest_menu is already inside the quest screen.  Its safe target is the
     # dedicated lower-right labyrinth card, not the bottom navigation label
     # 「クエスト」 used by the home-screen flow.
@@ -41,20 +51,10 @@ def main() -> int:
         image = cv2.imread(str(source), cv2.IMREAD_COLOR)
         if image is None:
             print(json.dumps({"status": "safety_stop", "reason": "capture_failed"}, ensure_ascii=False)); return 2
-        card = image[450:630, 1000:1280]
-        cv2.imwrite(str(roi_path), card)
-        try:
-            lines = OCRServiceAdapter(language="jpn").recognize(str(roi_path))
-        except Exception as exc:
-            print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False)); return 2
-        matches = [line for line in lines if line.confidence >= 0.70 and ("ラビリンス" in line.text or "黎明境" in line.text) and line.bbox]
-        if len(matches) != 1:
-            print(json.dumps({"status": "safety_stop", "reason": "labyrinth_target_not_unique", "match_count": len(matches)}, ensure_ascii=False)); return 2
-        bbox = matches[0].bbox
-        x = int((bbox[0] + bbox[2]) / 2) + 1000
-        y = int((bbox[1] + bbox[3]) / 2) + 450
-        if not (1000 <= x <= 1280 and 450 <= y <= 630):
-            print(json.dumps({"status": "safety_stop", "reason": "labyrinth_target_out_of_bounds", "x": x, "y": y}, ensure_ascii=False)); return 2
+        point = _locate(image, ROOT / "data/observations/live/template_quest_labyrinth_text.png", left=1000, top=450, right=1280, bottom=630)
+        if point is None:
+            print(json.dumps({"status": "safety_stop", "reason": "labyrinth_target_not_confirmed"}, ensure_ascii=False)); return 2
+        x, y = point
         try:
             run_adb_coordinate_sequence(
                 [(x, y)], serial=args.serial, healthcheck=True,
@@ -62,27 +62,17 @@ def main() -> int:
                 debug_capture_dir=ROOT / "data/observations/live", debug_capture_prefix="task_launch_labyrinth",
             )
             after = probe.observe_screen()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - safety-stop any ADB/vision failure
             print(json.dumps({"status": "safety_stop", "reason": f"launch_failed:{type(exc).__name__}"}, ensure_ascii=False)); return 2
         print(json.dumps({"status": "completed", "screen_after": after, "tap": [x, y]}, ensure_ascii=False)); return 0
     capture.capture(source)
     image = cv2.imread(str(source), cv2.IMREAD_COLOR)
     if image is None:
         print(json.dumps({"status": "safety_stop", "reason": "capture_failed"}, ensure_ascii=False)); return 2
-    roi = image[560:720, 0:1280]
-    cv2.imwrite(str(roi_path), roi)
-    try:
-        lines = OCRServiceAdapter(language="jpn").recognize(str(roi_path))
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False)); return 2
-    matches = [line for line in lines if line.confidence >= 0.70 and "クエスト" in line.text and line.bbox]
-    if len(matches) != 1:
-        print(json.dumps({"status": "safety_stop", "reason": "quest_target_not_unique", "match_count": len(matches)}, ensure_ascii=False)); return 2
-    bbox = matches[0].bbox
-    x = int((bbox[0] + bbox[2]) / 2)
-    y = int((bbox[1] + bbox[3]) / 2) + 560
-    if not (560 <= x <= 900 and 600 <= y <= 720):
-        print(json.dumps({"status": "safety_stop", "reason": "quest_target_out_of_bounds", "x": x, "y": y}, ensure_ascii=False)); return 2
+    point = _locate(image, ROOT / "data/observations/live/template_quest_nav_text.png", left=560, top=640, right=900, bottom=720)
+    if point is None:
+        print(json.dumps({"status": "safety_stop", "reason": "quest_target_not_confirmed"}, ensure_ascii=False)); return 2
+    x, y = point
     before_path = ROOT / "data/observations/live/task_launch_before.png"
     capture.capture(before_path)
     previous = hashlib.sha1(before_path.read_bytes()).hexdigest()
@@ -95,7 +85,7 @@ def main() -> int:
             debug_capture_dir=ROOT / "data/observations/live", debug_capture_prefix="task_launch",
         )
         after = probe.observe_screen()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - safety-stop any ADB/vision failure
         print(json.dumps({"status": "safety_stop", "reason": f"launch_failed:{type(exc).__name__}"}, ensure_ascii=False)); return 2
     print(json.dumps({"status": "completed", "screen_after": after, "tap": [x, y]}, ensure_ascii=False)); return 0
 
