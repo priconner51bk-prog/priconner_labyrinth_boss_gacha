@@ -42,12 +42,7 @@
       "auto_promote": false
     },
     "automation": {
-      "auto_continue_decision": true,
-      "auto_plan_route": true,
-      "auto_select_event": true,
-      "auto_select_reward": true,
-      "auto_select_ex_equipment": true,
-      "auto_select_shop": false
+      "auto_continue_decision": true
     }
   }
 }

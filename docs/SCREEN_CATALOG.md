@@ -13,13 +13,9 @@
 | `quest_menu` / `labyrinth_top` | ラビリンス入口 | 画面固有ラベル一致時のみ |
 | `guild_select` / `guild_confirm` | ギルド選択 | OCRまたは専用確認ボタン一致時のみ |
 
-## ガチャ・マップ
+## ガチャ
 
-`bonus`、`initial_char`、`character_join`、`boss_map`、`boss_detail`、`withdraw_confirm`、`move_confirm`、`event_confirm`、`event_battle_choice`、`item_reward`、`relic_choice` を管理します。共通の「閉じる」は画面IDだけで使わず、画面固有ターゲットを優先します。
-
-## 戦闘・ショップ
-
-`battle_tile_normal`、`battle_party`、`battle_party_ready`、`battle_victory`、`battle_reward`、`character_bonus`、`ex_equipment`、`ex_auto_dialog`、`ex_equipment_conflict`、`shop`、`shop_purchase_confirm`、`shop_purchase_complete`、`shop_exit_confirm` を管理します。
+`bonus`、`initial_char`、`character_join`、`boss_map`、`boss_detail`、`withdraw_confirm`、`item_reward` を管理します。ガチャには戦闘・ショップ・イベント工程はありません。共通の「閉じる」は画面IDだけで使わず、画面固有ターゲットを優先します。
 
 ## 機械検査
 
