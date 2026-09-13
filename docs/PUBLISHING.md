@@ -4,7 +4,7 @@
 
 ## 公開前確認
 
-配布ZIPを作成する場合は、`distribution/MANIFEST.md` を配布境界とし、生成物を `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913_v2.zip` に保存します。ZIPには実機キャプチャ、ログ、OCR結果、レポート、モデル、ローカル設定を含めません。作成後はZIP一覧から除外対象と `__pycache__` の混入がないことを確認します。
+配布ZIPを作成する場合は、`distribution/MANIFEST.md` を配布境界とし、生成物を `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913_v3.zip` に保存します。ZIPには実機キャプチャ、ログ、OCR結果、レポート、モデル、ローカル設定を含めません。作成後はZIP一覧から除外対象と `__pycache__` の混入がないことを確認します。
 
 ```powershell
 git status --short

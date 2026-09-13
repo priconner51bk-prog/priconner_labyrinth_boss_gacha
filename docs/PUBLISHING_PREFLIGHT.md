@@ -13,7 +13,7 @@ H2cの実行前にCloudで確認できる項目だけを定義する。認証、
 
 - 公開先: `origin` は GitHub リポジトリを指す（`git remote -v`）。
 - 著者情報・履歴方針: ユーザー指定のメールアドレスと「リリース確定時に新しい初回コミット」方針を確認済み。
-- 配布対象: `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913_v2.zip` を作成し、ZIP検査・画面カタログ検証・安全監査を実施済み。
+- 配布対象: `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913_v3.zip` を作成し、ZIP検査・画面カタログ検証・安全監査を実施済み。
 - 除外対象: 実機証跡、OCR結果、ログ、モデル、ローカル設定を配布ZIPに含めていないことを確認済み。
 - R-11証跡: `data/observations/live/task_*_verified.png` と対応JSONLを確認済み。
 - push承認: 本リポジトリへの変更をGitHubへpush済み。
