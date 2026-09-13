@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -15,7 +15,8 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr_service import OCRServiceAdapter
+from vision.template_screen_probe import load_template_probe_config
+
 
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
@@ -24,16 +25,10 @@ def main() -> int:
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
-    source = ROOT / "data/observations/live/task_shop_refresh_source.png"
     probe = ROOT / "data/observations/live/task_shop_refresh_probe.png"
-    capture.capture(source)
-    try:
-        text = "".join(line.text for line in OCRServiceAdapter(language="jpn").recognize(str(source))).replace(" ", "")
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False))
-        return 2
-    if "ショップ" not in text or "更新" not in text or "300" not in text:
-        print(json.dumps({"status": "safety_stop", "reason": "shop_refresh_not_confirmed", "text": text}, ensure_ascii=False))
+    screen_probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
+    if screen_probe.observe_screen() != "shop":
+        print(json.dumps({"status": "safety_stop", "reason": "shop_refresh_not_confirmed"}, ensure_ascii=False))
         return 2
     token = lambda: (capture.capture(probe), hashlib.sha1(probe.read_bytes()).hexdigest())[1]
     try:
@@ -44,7 +39,7 @@ def main() -> int:
             debug_capture_dir=ROOT / "data/observations/live",
             debug_capture_prefix="task_shop_refresh",
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"tap_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "refreshed", "cost": 300, "x": 450, "y": 648}, ensure_ascii=False))

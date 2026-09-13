@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
+from vision.template_screen_probe import load_template_probe_config
 
 
 def _screen_token(capture: AdbScreenCapture) -> str:
@@ -38,15 +38,8 @@ def main() -> int:
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
-    frame = ROOT / "data/observations/live/shop_candidates.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn").recognize(str(frame))
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False))
-        return 2
-    buttons = [line for line in lines if line.confidence >= 0.80 and "購入する" in line.text and line.bbox]
-    if len(buttons) < 1:
+    probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
+    if probe.observe_screen() != "shop" or not any(probe.target_visible(label) for label in ("ショップ購入1", "ショップ購入2", "ショップ購入3")):
         print(json.dumps({"status": "safety_stop", "reason": "shop_purchase_button_not_confirmed"}, ensure_ascii=False))
         return 2
     if args.choice is None:
@@ -61,15 +54,10 @@ def main() -> int:
         screen = tap(capture, (x, 350), args.serial, screen, "task_shop_purchase")
         screen = tap(capture, (785, 575), args.serial, screen, "task_shop_confirm")
         screen = tap(capture, (640, 495), args.serial, screen, "task_shop_complete")
-        # The close button is validated by OCR because its appearance changes
-        # with the sold-out overlay and is unsuitable for a static template.
-        close_frame = ROOT / "data/observations/live/shop_close_verify.png"
-        capture.capture(close_frame)
-        close_lines = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn").recognize(str(close_frame))
-        if not any(line.confidence >= 0.80 and "閉じる" in line.text for line in close_lines):
+        if not probe.target_visible("ショップ閉じる"):
             raise RuntimeError("shop_close_not_confirmed")
         tap(capture, (1090, 635), args.serial, screen, "task_shop_close")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"shop_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "completed", "choice": choice}, ensure_ascii=False))
