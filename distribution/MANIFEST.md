@@ -1,6 +1,6 @@
 # 配布最小構成マニフェスト
 
-生成物: `distribution/priconner_labyrinth_boss_gacha_minimal_final_v2.zip`
+生成物: `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913.zip`
 検査結果: 230エントリ、設定参照62件、除外対象混入なし。
 
 ## ZIP配布対象
@@ -19,8 +19,6 @@
 - `requirements-ocr.txt`（ホーム画面から入口へ移動する場合のみ）
 - `README.md`
 - `SECURITY.md`
-- `docs/SETUP.md`
-- `docs/OPERATIONS.md`
 - `docs/SETUP.md`
 - `docs/OPERATIONS.md`
 - `docs/CONFIGURATION.md`
