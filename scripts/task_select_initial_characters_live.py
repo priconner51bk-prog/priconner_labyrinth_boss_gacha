@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
-import sys
 import subprocess
+import sys
 import time
+from pathlib import Path
 
 import cv2
 
@@ -18,9 +18,6 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.labyrinth_character_ocr import recognize_character_cards
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.ocr_service import OCRServiceAdapter
 from vision.character_icon_matcher import compare_registered_position
 from vision.template_screen_probe import load_template_probe_config
 
@@ -33,22 +30,12 @@ def _observe_initial_char(capture, probe, evidence_path: Path) -> str | None:
     for attempt in range(3):
         try:
             current = probe.observe_screen()
-        except Exception:
+        except Exception:  # noqa: BLE001 - transient probe failure is treated as unknown
             current = None
         if current == "initial_char":
             return current
         if attempt < 2:
             time.sleep(0.15)
-    try:
-        capture.capture(evidence_path)
-        text = "".join(
-            line.text for line in OCRServiceAdapter(language="jpn").recognize(str(evidence_path))
-            if line.confidence >= 0.70
-        )
-    except Exception:
-        return current
-    if "キャラ選択" in text and ("選択したキャラ" in text or "仲間に勧誘" in text):
-        return "initial_char"
     # Use the shared authoritative checker once when the local template probe
     # disagrees. This avoids rejecting a valid screen because two captures
     # landed on different transition frames; it never authorizes input for a
@@ -81,25 +68,8 @@ def main() -> int:
     args = parser.parse_args()
     selection_reason = "specified_indices"
     if args.auto:
-        # 5人以下なら編成判断を挟まず全員選択する。
-        # 6人以上は強さ・役割・相性を推測しない。
-        capture = AdbScreenCapture(serial=args.serial)
-        probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
-        if _observe_initial_char(capture, probe, args.output.with_name("initial_character_screen_check.png")) != "initial_char":
-            print(json.dumps({"status": "safety_stop", "reason": "unexpected_screen"}, ensure_ascii=False))
-            return 2
-        capture.capture(args.output)
-        ocr = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn")
-        config = json.loads((ROOT / "configs" / "labyrinth_ocr_regions.json").read_text(encoding="utf-8"))
-        regions = config["regions"]["initial_character_cards"]
-        candidates = recognize_character_cards(str(args.output), ocr, regions, preprocess=True, min_confidence=0.80)
-        if not candidates or len(candidates) > 5:
-            print(json.dumps({"status": "user_assist_required", "reason": "initial_composition_not_learned",
-                              "candidate_count": len(candidates)}, ensure_ascii=False))
-            return 2
-        indices = [int(item["index"]) for item in candidates]
-        args.indices = ",".join(str(index) for index in indices)
-        selection_reason = "pool_under_five_all"
+        print(json.dumps({"status": "user_assist_required", "reason": "auto_selection_requires_manual_indices"}, ensure_ascii=False))
+        return 0
     indices: list[int] = []
     if args.indices:
         try:
@@ -167,8 +137,8 @@ def main() -> int:
                                "confidence": 1.0, "x": int(region.get("center", {}).get("x", x + width // 2)),
                                "y": int(region.get("center", {}).get("y", y + height // 2))})
     else:
-        ocr = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn")
-        candidates = recognize_character_cards(str(args.output), ocr, regions, preprocess=True, min_confidence=0.80)
+        print(json.dumps({"status": "user_assist_required", "reason": "manual_confirmed_required_without_ocr"}, ensure_ascii=False))
+        return 0
     by_index = {item["index"]: item for item in candidates}
     if any(index not in by_index for index in indices):
         print(json.dumps({"status": "safety_stop", "reason": "requested_card_not_recognized", "candidates": candidates}, ensure_ascii=False))
@@ -202,7 +172,7 @@ def main() -> int:
             print(json.dumps({"status": "safety_stop", "reason": "recruit_screen_not_confirmed",
                               "screen_after": after_screen}, ensure_ascii=False))
             return 2
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"tap_failed:{type(exc).__name__}", "candidates": candidates}, ensure_ascii=False))
         return 2
     result = {"status": "selected", "indices": indices, "candidates": candidates,
