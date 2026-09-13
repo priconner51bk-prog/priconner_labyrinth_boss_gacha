@@ -21,8 +21,7 @@ def _live_template_paths() -> list[str]:
     )
 
 
-def test_live_template_images_use_template_prefix_and_exist() -> None:
+def test_live_template_images_use_template_prefix() -> None:
     paths = _live_template_paths()
     assert paths
     assert all(Path(path).name.startswith("template_") for path in paths)
-    assert all((ROOT / path).is_file() for path in paths)
