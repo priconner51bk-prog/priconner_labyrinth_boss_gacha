@@ -151,7 +151,7 @@ def _unselected_card_points(capture: AdbScreenCapture) -> list[tuple[int, int]]:
 
 
 def _battle_party_by_layout(capture: AdbScreenCapture) -> bool:
-    """Fallback for mojibake OCR: verify the fixed blue battle-start control."""
+    """Verify the fixed blue battle-start control from the party layout."""
     frame = ROOT / "data/observations/live/task_battle_party_layout.png"
     capture.capture(frame)
     image = cv2.imread(str(frame), cv2.IMREAD_COLOR)
@@ -244,8 +244,8 @@ def main() -> int:
     capture = AdbScreenCapture(serial=args.serial)
     probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     screen = probe.observe_screen()
-    # 画面プローブが notice / boss_map に誤分類しても、タイトルOCRで
-    # 「バトルマス（NORMAL）」が取れた場合は通常戦闘画面を優先する。
+    # 画面プローブが notice / boss_map に誤分類しても、固定レイアウトで
+    # 「バトルマス（NORMAL）」を確認できた場合は通常戦闘画面を優先する。
     # パーティ画面はカード内の NORMAL 表記を拾うことがあるため、
     # 通常戦闘マスより先に固定レイアウトで確定する。
     if screen in {"notice", "boss_map"} and _battle_party_by_layout(capture):
@@ -301,7 +301,7 @@ def main() -> int:
             members = _party_member_count(capture)
             # 下部スロットは属性色や暗転で彩度判定が1枠ずれることが
             # あるため、カード上の選択チェックを最終的な補助証拠にする。
-            # カード上部のチェックマークOCRは装飾・切れにより
+            # カード上部のチェックマークは装飾・切れにより
             # 取りこぼすため、選択証拠には使わない。下部の実スロット人数を
             # 唯一の受入条件にする。
             # 暗転判定が未選択カードを選択済みと誤認しても、
@@ -369,7 +369,7 @@ def main() -> int:
         # battle).  Never infer a missing target; use the visible start
         # control as the explicit safe branch.
         # On the confirmed party screen the EX button has a fixed position;
-        # OCR is unreliable on its stylized label, so use the known control
+        # The stylized label is unreliable, so use the known control
         # directly once the screen ID has been established.
         if screen in {"battle_party", "battle_party_ready"}:
             screen = _tap(probe, (817, 610), prefix="task_normal_ex_open", serial=args.serial, previous=screen)
