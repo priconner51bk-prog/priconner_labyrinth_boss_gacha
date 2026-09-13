@@ -41,7 +41,6 @@ HELL_TILE_AVOID_AREAS = frozenset({4, 5})
 HELL_TILE_RELIC_LEVEL_THRESHOLD = 15
 ROUTE_TILE_PRIORITY = ("Extreme", "通常", "遺物", "コネクトサイン", "ショップ", "イベント", "ボス", "HELL")
 THREE_CHOICE_ORDER = (3, 2, 1)
-BOSS_NAME_CONFIRM_SEQUENCE = ("左BOSS", "閉じる", "右BOSS", "閉じる")
 
 # BlueStacksのADB画面はウィンドウ枠を含まない1280x720座標を使用する。
 ADB_SERIAL = "127.0.0.1:5555"
@@ -863,28 +862,10 @@ FIXED_STEPS = (
     RouteStep("マップ"),
 )
 
-# 出発までの固定操作。画面認識・ギルド選択を外部から注入できるため、
-# このシーンでは追加判断を行わず、登録済みのADBスクリプトだけを実行する。
-DEPARTURE_SCRIPT_STEPS = (
-    "クエスト", "ラビリンス", "出発", "フォレスティエ",
-    "選択する", "難易度確認", "難易度10", "出発する",
-)
-
 # ── 戦闘スクリプト／シーン ───────────────────────────────────────
 # 戦闘開始、マス移動、勝利、敗北を独立したシーンとして扱う。
 # ── シーン：戦闘開始 ─────────────────────────────────────────────
 # 編成判断後、このシーンだけを呼び出して戦闘開始まで進める。
-BATTLE_START_STEPS = (
-    RouteStep("EX装備"),
-    RouteStep("おまかせ装備"),
-    RouteStep("全て"),
-    RouteStep("物理防御貫通"),
-    RouteStep("OK"),
-    RouteStep("OK"),
-    RouteStep("装備確定"),
-    RouteStep("SET確認"),
-)
-
 # 固定座標UIでは、上記ラベル列をこの順で実行し、各操作後に2秒待機する。
 # EX装備は通常実行する。エリア3-5のエリアボスだけ手動例外とする。
 BATTLE_EQUIPMENT_SEQUENCE = (
@@ -895,8 +876,6 @@ BATTLE_SCRIPT_SEQUENCE = BATTLE_EQUIPMENT_SEQUENCE + ("バトル開始",)
 BATTLE_SCRIPT_MANUAL_EX_SEQUENCE = ("バトル開始",)
 
 # 装備確定直後は、画面状態を判断せず必ずキャンセルして開始する。
-BATTLE_FALLBACK_SEQUENCE = ("キャンセル", "バトル開始")
-
 # シーン単位の一覧。実行側はシーン名で呼び出し、別フローを混在させない。
 SCRIPT_SCENES: Mapping[str, tuple[str, ...]] = {
     f"{BATTLE_SCRIPT_NAME}/{BATTLE_START_SCENE}": BATTLE_SCRIPT_SEQUENCE,
@@ -907,15 +886,6 @@ SCRIPT_SCENES: Mapping[str, tuple[str, ...]] = {
     f"{BATTLE_SCRIPT_NAME}/{EXTREME_CHARACTER_SCENE}": ("キャラ選択", "ユーザー確認待ち"),
     f"{BATTLE_SCRIPT_NAME}/{SHOP_SCENE}": ("移動先確認OK",),
 }
-
-EXTREME_VICTORY_NEXT_SCENES = (EXTREME_RELIC_SCENE, EXTREME_CHARACTER_SCENE)
-VICTORY_RESULT_SCRIPT_SEQUENCE = ("次へ", "次へ")
-
-# 旧画面でのチェック確認は廃止し、スクリプト側で状態を揃える。
-LEGACY_BATTLE_STEPS = (
-    RouteStep("EX装備チェックON"),
-    RouteStep("全て"),
-)
 
 # 遺物マスは移動・確認をスクリプトで処理し、候補比較だけユーザーへ返す。
 RELIC_TILE_STEPS = (
@@ -975,12 +945,7 @@ FORBIDDEN = frozenset({
 })
 
 # 判断ロジックは画面認識側へ返し、ここでは安全な定型処理だけを担当する。
-ATTRIBUTE_PRIORITY = ("光", "火", "水", "風", "闇")
 RELIC_PRIORITY = ("加速", "会心", "弱体", "強化", "守備")
-AREA1_REQUIRED_CONNECT_SIGNS = 2
-EXTREME_PRIORITY_AREAS = frozenset({"2-5"})
-SINGLE_TARGET_BOSSES = frozenset({"グレーターゴーレム", "グレートトゥンヌス"})
-CRITICAL_FOCUS_BOSSES = frozenset({"グレートトゥンヌス"})
 
 
 def rank_relic(stars: int, effect: str, value: int = 0, current: int = 0) -> tuple[int, int, int, int]:
