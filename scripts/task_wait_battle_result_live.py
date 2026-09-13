@@ -16,11 +16,11 @@ from vision.template_screen_probe import load_template_probe_config
 
 
 def main() -> int:
-    # Windows consoles may default to cp932; JSON contains OCR text such as
-    # emoji/rare kanji, so keep task output machine-readable in UTF-8.
+    # Windows consoles may default to cp932; keep task output machine-readable
+    # in UTF-8.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="戦闘結果を画面変化までOCR監視")
+    parser = argparse.ArgumentParser(description="戦闘結果をテンプレートで監視")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--interval", type=float, default=1.0)

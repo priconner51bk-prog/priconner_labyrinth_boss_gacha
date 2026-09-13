@@ -21,7 +21,7 @@ from vision.template_screen_probe import load_template_probe_config
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="撤退確認をOCR確認して確定")
+    parser = argparse.ArgumentParser(description="撤退確認をテンプレート確認して確定")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
