@@ -367,9 +367,8 @@ class AutoPilot:
                     return self._terminal("stopped", self._stop_reason)
                 self.state.phase = "select_initial_characters"
                 return self._action("boss_gacha", {"status": "recovered_matched_bosses", "screen": current_screen})
-        # The boss-gacha script uses PaddleOCRAdapter directly and requires
-        # an explicit model source; the standard Japanese default models are
-        # already cached on this machine.
+        # The boss-gacha flow is template-driven; missing live evidence must
+        # stop safely instead of falling back to OCR or guessed coordinates.
         result = self._invoke("task_boss_gacha_live.py",
                              ["--execute", "--default-models",
                               "--difficulty", str(self.state.difficulty), "--guild", self.state.guild,
