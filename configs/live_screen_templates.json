@@ -227,6 +227,13 @@
       "right": 1080,
       "bottom": 690
     },
+    "ギルド選択キャンセル": {
+      "image": "data/observations/live/template_guild_confirm_cancel.png",
+      "left": 205,
+      "top": 600,
+      "right": 475,
+      "bottom": 667
+    },
     "マップ": {
       "image": "data/observations/live/optimized/template_targets_2.png",
       "left": 0,
