@@ -58,7 +58,7 @@ class AdbTemplateScreenProbe:
         "ex_equipment": {"おまかせ装備"}, "ex_auto_dialog": {"EX自動設定OK"},
         "ex_equipment_conflict": {"EX装備競合警告", "EX競合キャンセル"},
         "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する"},
-        "withdraw_confirm": {"撤退確認OK"},
+        "withdraw_confirm": {"撤退確認OK", "撤退確認キャンセル"},
     }
 
     def _capture(self):

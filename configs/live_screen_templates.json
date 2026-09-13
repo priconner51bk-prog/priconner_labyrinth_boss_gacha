@@ -304,6 +304,13 @@
       "right": 950,
       "bottom": 550
     },
+    "撤退確認キャンセル": {
+      "image": "data/observations/live/template_withdraw_confirm_cancel.png",
+      "left": 358,
+      "top": 463,
+      "right": 632,
+      "bottom": 530
+    },
     "移動先確認OK": {
       "image": "data/observations/live/optimized/template_OK_2.png",
       "left": 650,
