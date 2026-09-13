@@ -143,7 +143,7 @@ R-07、R-08は完了済みです。R-09は公開対象・ローカル専用・�
 - [x] **R-06 | P1 | W:H | RISK:H | HYBRID | 全ADB操作を共通安全境界へ監査する**
   - 状態: DONE
   - 完了条件: raw ADB経路を列挙し、対象画面・禁止操作・安全停止・入力履歴の有無を確認する。実機確認部分は未完了のまま残す
-  - Cloud監査結果: 共通ラッパー利用経路と、`task_return_initial_char_live.py` 等の直接 `subprocess.run` 経路を列挙。直接経路の対象画面・停止条件・入力履歴は実機での前後証跡確認が必要。
+  - Cloud監査結果: 共通ラッパー利用経路と、残存する直接 `subprocess.run` 経路を列挙。直接経路の対象画面・停止条件・入力履歴は実機での前後証跡確認が必要。
   - 必要入力: 実機での対象画面、操作前後画面、ADBコマンド、停止理由を含むJSONLとPNG
   - 再開条件: Local入力を受領し、直接ADB経路ごとの安全境界を突合できること
   - 完了根拠: `audit_safety.py` で26ファイルを監査し findings=0、safe=true、execution_allowed=falseを確認。実機 `emulator-5554` はdevice、1280x720、ゲーム画面 `labyrinth_top` / `challenge_active=true`。入力なしpreflightで `screen_id=labyrinth_top` を確認。禁止操作は実行していない。
@@ -195,7 +195,7 @@ R-07、R-08は完了済みです。R-09は公開対象・ローカル専用・�
   - 見積根拠: 実機状態と画面遷移に依存
 
 - [ ] **R-12 | P1 | W:M | RISK:M | CLOUD | 配布前チェックリストと実測結果を一致させる**
-  - 状態: 検証完了・公開判定待ち
+  - 状態: 残件あり（最終公開URLの確定待ち）
   - 完了条件: `PUBLISHING_PREFLIGHT.md` の全項目に根拠を付け、未確認項目を残したまま公開可としない
   - 推定時間: 45分
   - 推定時間（分）: 45
