@@ -661,7 +661,6 @@ def click_and_wait(adapter: ScreenAdapter, label: str, *, wait_hidden: bool = Fa
 
 
 CANDIDATE_BUTTONS = ("候補1", "候補2", "候補3")
-SHOP_PURCHASE_BUTTONS = ("ショップ購入1", "ショップ購入2", "ショップ購入3")
 
 
 def select_candidate_and_close(adapter: ScreenAdapter, choice: int) -> str:
@@ -676,36 +675,6 @@ def select_candidate_and_close(adapter: ScreenAdapter, choice: int) -> str:
         return "画面確認待ち: 閉じる"
     click_and_wait(adapter, "閉じる")
     return f"{candidate}を選択して閉じました"
-
-
-def play_janken_event(adapter: ScreenAdapter, choice: int = 2) -> str:
-    """じゃんけんイベントは候補2を選び、結果を少し表示してから閉じる。"""
-    if choice not in (1, 2, 3):
-        raise ValueError("じゃんけん候補は1、2、3のいずれかを指定してください")
-    candidate = CANDIDATE_BUTTONS[choice - 1]
-    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(candidate):
-        return f"画面確認待ち: {candidate}"
-    click_and_wait(adapter, candidate)
-    if isinstance(adapter, AdbScreenAdapter) and adapter.visibility_probe is not None:
-        if not adapter.wait_until_visible("閉じる", timeout_seconds=FAST_TRANSITION_TIMEOUT_SECONDS):
-            return "画面確認待ち: 閉じる"
-        observed = "表示確認後"
-    else:
-        time.sleep(EVENT_RESULT_OBSERVE_SECONDS)
-        observed = f"{EVENT_RESULT_OBSERVE_SECONDS}秒表示後"
-    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible("閉じる"):
-        return "画面確認待ち: 閉じる"
-    click_and_wait(adapter, "閉じる")
-    return f"じゃんけん{candidate}を選択し、{observed}に閉じました"
-
-
-def confirm_shop_move(adapter: ScreenAdapter) -> str:
-    """ショップマス選択後の移動確認を確定する。"""
-    label = "移動先確認OK"
-    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
-        return f"画面確認待ち: {label}"
-    click_and_wait(adapter, label)
-    return "ショップ移動を確定しました"
 
 
 def select_boss_and_confirm(adapter: ScreenAdapter) -> str:
@@ -809,39 +778,6 @@ def confirm_three_parties_and_start(adapter: ScreenAdapter) -> str:
             return f"画面確認待ち: {label}"
         click_and_wait(adapter, label)
     return "3編成を確認し、パーティ3でバトル開始しました"
-
-
-def purchase_shop_candidate(adapter: ScreenAdapter, choice: int, *, close_after: bool = False) -> str:
-    """ショップ候補の購入から確認・完了までを1セットで実行する。"""
-    if choice not in (1, 2, 3):
-        raise ValueError("ショップ購入候補は1、2、3のいずれかを指定してください")
-    purchase = SHOP_PURCHASE_BUTTONS[choice - 1]
-    sequence = (purchase, "購入確認OK", "購入完了OK")
-    if close_after:
-        sequence += ("ショップ閉じる", "ショップ終了OK")
-    for label in sequence:
-        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
-            return f"画面確認待ち: {label}"
-        click_and_wait(adapter, label)
-    return f"ショップ候補{choice}を購入しました"
-
-
-def purchase_shop_candidates_and_close(adapter: ScreenAdapter, choices: tuple[int, ...] = (1, 2, 3)) -> str:
-    """指定候補を購入し、最後の購入後にショップを閉じてOKを押す。"""
-    if not choices:
-        raise ValueError("購入候補がありません")
-    for index, choice in enumerate(choices):
-        purchase_shop_candidate(adapter, choice, close_after=index == len(choices) - 1)
-    return "ショップ購入完了。ショップを閉じました"
-
-
-def refresh_shop(adapter: ScreenAdapter) -> str:
-    """ショップの更新ボタンを押す。更新後の候補判断は別処理に戻す。"""
-    label = "ショップ更新"
-    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
-        return f"画面確認待ち: {label}"
-    click_and_wait(adapter, label)
-    return "ショップを更新しました"
 
 
 @dataclass(frozen=True)
