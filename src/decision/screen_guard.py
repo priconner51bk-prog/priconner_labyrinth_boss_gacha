@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Mapping
-
 
 LABYRINTH_BOTTOM_LABELS = frozenset({"キャラ", "迷宮遺物", "HP"})
 NON_LABYRINTH_BOTTOM_LABELS = frozenset({"クエスト", "マイページ", "キャラ", "強化", "ストーリー"})
@@ -23,24 +22,7 @@ _RESUME_TASKS = {
     "initial_char": "task_initial_setup",
     "boss_map": "task_boss_name",
     "withdraw_confirm": "withdraw",
-    "move_confirm": "confirm_move",
-    "event_confirm": "move_route",
-    "event_battle_choice": "handle_tile",
-    "item_reward": "select_reward",
-    "relic_choice": "select_reward",
-    "shop": "task_shop",
-    "shop_purchase_confirm": "select_reward",
-    "shop_purchase_complete": "select_reward",
-    "shop_exit_confirm": "handle_tile",
-    "battle_tile_normal": "identify_enemy",
-    "battle_party": "prepare_battle",
-    "battle_party_ready": "prepare_battle",
-    "ex_equipment": "prepare_battle",
-    "ex_auto_dialog": "prepare_battle",
-    "ex_equipment_conflict": "prepare_battle",
-    "battle_victory": "select_reward",
-    "battle_reward": "select_reward",
-    "character_bonus": "select_reward",
+    "item_reward": "task_close_dialog",
 }
 
 
@@ -56,10 +38,8 @@ def classify_resume_screen(screen_id: object, *, challenge_active: object = Fals
         return None
     if not isinstance(challenge_active, bool):
         return None
-    if screen_id == "labyrinth_top" and challenge_active:
-        resume_task = "task_initial_setup"
-        entry_mode = "resume"
-    elif screen_id == "initial_char" and challenge_active:
+    if ((screen_id == "labyrinth_top" or screen_id == "initial_char")
+            and challenge_active):
         resume_task = "task_initial_setup"
         entry_mode = "resume"
     else:
