@@ -16,7 +16,6 @@
 - `data/template_migration/templates/`
 - `data/observations/live/template_*.png`
 - `requirements.txt`
-- `requirements-ocr.txt`（ホーム画面から入口へ移動する場合のみ）
 - `README.md`
 - `SECURITY.md`
 - `docs/SETUP.md`

@@ -43,7 +43,7 @@ python scripts/task_launch_labyrinth_live.py --serial 127.0.0.1:5555
 ホーム画面からの移動も使う場合は、追加で次を実行します。
 
 ```powershell
-python -m pip install -r requirements-ocr.txt
+OCR依存は廃止済みです。追加のOCR依存をインストールしないでください。
 ```
 
 GUIを使う場合:
