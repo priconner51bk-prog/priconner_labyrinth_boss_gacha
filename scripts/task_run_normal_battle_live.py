@@ -324,14 +324,8 @@ def main() -> int:
     # 「バトルマス（NORMAL）」が取れた場合は通常戦闘画面を優先する。
     # パーティ画面はカード内の NORMAL 表記を拾うことがあるため、
     # 通常戦闘マスより先に固定レイアウトで確定する。
-    if screen in {"notice", "boss_map", "initial_char", "battle_tile_normal"} and _battle_party_by_ocr(capture):
+    if screen in {"notice", "boss_map"} and _battle_party_by_layout(capture):
         screen = "battle_party"
-    elif screen in {"boss_map", "notice", "initial_char"} and _normal_tile_by_ocr(capture):
-        screen = "battle_tile_normal"
-    elif screen in {"boss_map", "notice", "initial_char"} and _ex_equipment_by_ocr(capture):
-        screen = "ex_equipment"
-    elif screen == "notice" and _ex_auto_dialog_by_ocr(capture):
-        screen = "ex_auto_dialog"
     if screen not in {"battle_tile_normal", "battle_party", "battle_party_ready"}:
         print(json.dumps({"status": "safety_stop", "reason": "normal_battle_entry_not_confirmed", "screen": screen}, ensure_ascii=False))
         return 2
@@ -455,8 +449,6 @@ def main() -> int:
         # directly once the screen ID has been established.
         if screen in {"battle_party", "battle_party_ready"}:
             screen = _tap(probe, (817, 610), prefix="task_normal_ex_open", serial=args.serial, previous=screen)
-            if screen == "notice" and _ex_equipment_by_ocr(capture):
-                screen = "ex_equipment"
         elif not probe.target_visible("EX装備"):
             if args.equipment_only:
                 print(json.dumps({"status": "equipment_ready", "screen": "battle_party"}, ensure_ascii=False))
@@ -472,8 +464,6 @@ def main() -> int:
         screen = _tap(probe, (790, 640), prefix="task_normal_ex_auto", serial=args.serial, previous=screen)
         if screen not in {"ex_auto_dialog", "notice"}:
             raise RuntimeError(f"unexpected_ex_dialog:{screen}")
-        if screen == "notice" and _ex_equipment_by_ocr(capture):
-            screen = "ex_auto_dialog"
         if screen != "ex_auto_dialog":
             raise RuntimeError(f"ex_auto_dialog_not_confirmed:{screen}")
         _set_all_priority_physical(capture, serial=args.serial)
@@ -500,18 +490,7 @@ def main() -> int:
             debug_capture_dir=ROOT / "data/observations/live",
             debug_capture_prefix="task_normal_ex_confirm",
         )
-        if _ex_equipment_by_ocr(capture):
-            # This is the explicit unchanged-screen branch.  Do not require
-            # a screen transition for the cancel tap itself.
-            run_adb_coordinate_sequence(
-                [(195, 640)], serial=args.serial, healthcheck=True,
-                interval_seconds=0.12,
-                debug_capture_dir=ROOT / "data/observations/live",
-                debug_capture_prefix="task_normal_ex_cancel",
-            )
-            screen = probe.observe_screen()
-        else:
-            screen = probe.observe_screen()
+        screen = probe.observe_screen()
         if screen not in {"battle_party", "battle_party_ready", "notice", "ex_equipment_conflict"}:
             raise RuntimeError(f"battle_start_not_confirmed:{screen}")
         if args.equipment_only:
@@ -526,7 +505,7 @@ def main() -> int:
             recovered = probe.observe_screen()
             if recovered in {"battle", "battle_result", "battle_victory", "battle_failed"}:
                 pass
-            elif recovered in {"battle_party", "battle_party_ready", "notice"} and _battle_party_by_ocr(capture):
+            elif recovered in {"battle_party", "battle_party_ready"} and probe.target_visible("バトル開始"):
                 _tap(probe, (1135, 605), prefix="task_normal_battle_start_retry", serial=args.serial, previous=recovered)
             else:
                 raise
