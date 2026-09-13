@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-import tempfile
-from typing import Mapping
-import json
+from typing import ClassVar
 
 import cv2
 import numpy as np
@@ -36,7 +37,8 @@ class AdbTemplateScreenProbe:
         self._last_image = None
         self._template_cache = {}
 
-    _SCREEN_TARGETS = {
+    _SCREEN_TARGETS: ClassVar[dict[str, set[str]]] = {
+        "notice": {"お知らせウィンドウタイトル", "お知らせ閉じる"},
         "labyrinth_top": {"出発", "挑戦中"}, "quest_menu": {"ラビリンス"},
         "guild_select": {"フォレスティエ", "美食殿"}, "guild_confirm": {"ギルド選択確認"}, "bonus": {"閉じる", "出発ボーナス閉じる"},
         "boss_detail": {"閉じる"}, "character_join": {"閉じる", "キャラ加入閉じる"},
@@ -45,19 +47,18 @@ class AdbTemplateScreenProbe:
         "event_battle_choice": {"イベント通常選択"},
         "item_reward": {"アイテム報酬閉じる", "閉じる", "出発ボーナス閉じる"},
         "relic_choice": {"遺物選択"},
-        "shop": {"ショップ購入1", "ショップ購入2", "ショップ購入3"},
         "shop_purchase_confirm": {"購入確認OK"},
         "shop_purchase_complete": {"購入完了OK"},
         "shop_exit_confirm": {"ショップ終了OK"},
+        "shop": {"ショップ購入1", "ショップ購入2", "ショップ購入3", "ショップ閉じる"},
         "battle_tile_normal": {"挑戦する"},
         "battle_party": {"バトル開始"},
         "battle_party_ready": {"EX装備"}, "battle_victory": {"勝利次へ"}, "battle_reward": {"報酬次へ"},
         "character_bonus": {"キャラボーナス選択"},
         "ex_equipment": {"おまかせ装備"}, "ex_auto_dialog": {"EX自動設定OK"},
-        "ex_auto_dialog": {"EX自動設定OK"}, "ex_equipment_conflict": {"EX装備競合警告", "EX競合キャンセル"},
-        "battle_victory": {"勝利次へ"},
+        "ex_equipment_conflict": {"EX装備競合警告", "EX競合キャンセル"},
         "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する"},
-        "boss_detail": {"閉じる"}, "withdraw_confirm": {"撤退確認OK"},
+        "withdraw_confirm": {"撤退確認OK"},
     }
 
     def _capture(self):
@@ -82,7 +83,13 @@ class AdbTemplateScreenProbe:
             # 直後に全件が存在するとは限らない。欠落は一致なしとして
             # 扱い、呼出し側の screen_not_recognized 安全停止へ委譲する。
             return 0.0
-        r = rimg[region.top:region.bottom, region.left:region.right]
+        # Cropped ROI templates are stored at their natural origin (0, 0).
+        # Full-screen legacy templates keep using the configured coordinates.
+        expected_shape = (region.bottom - region.top, region.right - region.left)
+        if rimg.shape[:2] == expected_shape:
+            r = rimg
+        else:
+            r = rimg[region.top:region.bottom, region.left:region.right]
         if c.shape != r.shape or c.size == 0:
             return 0.0
         # Normalized correlation is undefined for flat ROIs and OpenCV

@@ -1,71 +1,455 @@
 {
   "threshold": 0.95,
   "screens": {
-    "labyrinth_top": {"image": "data/observations/live/current_screen.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "quest_menu": {"image": "data/observations/live/tap_02_depart_card.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "guild_select": {"image": "data/observations/live/run2_depart_screen.png", "left": 330, "top": 80, "right": 950, "bottom": 150},
-    "guild_confirm": {"image": "data/observations/live/current_after_failed_guild.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "bonus": {"image": "data/observations/live/run2_bonus.png", "left": 300, "top": 30, "right": 970, "bottom": 80},
-    "boss_map": {"image": "data/observations/live/after_character_join_close.png", "left": 400, "top": 15, "right": 880, "bottom": 90},
-    "boss_detail": {"image": "data/observations/live/task_boss_gacha_left_1.png", "left": 300, "top": 30, "right": 970, "bottom": 80},
-    "withdraw_confirm": {"image": "data/observations/live/current_after_withdraw_timeout.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "character_join": {"image": "data/observations/live/after_initial_character_selection.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "move_confirm": {"image": "data/observations/live/after_map_node_tap.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "event_confirm": {"image": "data/observations/live/task_move_confirm_event_0001_source.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "event_battle_choice": {"image": "data/observations/live/current_now.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "battle_tile_normal": {"image": "data/observations/live/after_move_confirm_ok.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "battle_party": {"image": "data/observations/live/after_battle_challenge.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "battle_party_ready": {"image": "data/observations/live/after_ex_conflict_cancel.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "ex_equipment": {"image": "data/observations/live/after_ex_equipment_open.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "ex_auto_dialog": {"image": "data/observations/live/after_ex_auto.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "ex_equipment_conflict": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "battle_victory": {"image": "data/observations/live/battle_result_poll_1.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "battle_reward": {"image": "data/observations/live/after_victory_next.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "character_bonus": {"image": "data/observations/live/current_second_bonus.png", "left": 0, "top": 0, "right": 1280, "bottom": 720},
-    "item_reward": {"image": "data/observations/live/current_map_after_event.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
-    ,"relic_choice": {"image": "data/observations/live/current_connect_screen.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
-    ,"shop": {"image": "data/observations/live/current_shop.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
-    ,"shop_purchase_confirm": {"image": "data/observations/live/current_after_shop_attempt.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
-    ,"shop_purchase_complete": {"image": "data/observations/live/current_shop_after_purchase.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
-    ,"shop_exit_confirm": {"image": "data/observations/live/current_after_shop_close.png", "left": 0, "top": 0, "right": 1280, "bottom": 720}
+    "labyrinth_top": {
+      "image": "data/observations/live/template_depart_button_text.png",
+      "left": 755,
+      "top": 378,
+      "right": 825,
+      "bottom": 420
+    },
+    "quest_menu": {
+      "image": "data/observations/live/template_quest_labyrinth_text.png",
+      "left": 1062,
+      "top": 563,
+      "right": 1247,
+      "bottom": 590
+    },
+    "guild_select": {
+      "image": "data/observations/live/template_guild_select_header_text_compact.png",
+      "left": 410,
+      "top": 97,
+      "right": 870,
+      "bottom": 142
+    },
+    "guild_confirm": {
+      "image": "data/observations/live/template_guild_confirm_text.png",
+      "left": 880,
+      "top": 618,
+      "right": 1005,
+      "bottom": 662
+    },
+    "bonus": {
+      "image": "data/observations/live/template_bonus_title_text.png",
+      "left": 550,
+      "top": 35,
+      "right": 730,
+      "bottom": 75
+    },
+    "boss_map": {
+      "image": "data/observations/live/template_boss_map_boss_label_compact.png",
+      "left": 640,
+      "top": 20,
+      "right": 700,
+      "bottom": 80
+    },
+    "boss_detail": {
+      "image": "data/observations/live/template_boss_detail_compact.png",
+      "left": 510,
+      "top": 33,
+      "right": 760,
+      "bottom": 77
+    },
+    "withdraw_confirm": {
+      "image": "data/observations/live/template_withdraw_confirm_ok_text.png",
+      "left": 760,
+      "top": 460,
+      "right": 840,
+      "bottom": 505
+    },
+    "character_join": {
+      "image": "data/observations/live/template_character_join_text.png",
+      "left": 590,
+      "top": 565,
+      "right": 690,
+      "bottom": 605
+    },
+    "move_confirm": {
+      "image": "data/observations/live/template_move_confirm_ok_text.png",
+      "left": 760,
+      "top": 470,
+      "right": 840,
+      "bottom": 515
+    },
+    "event_confirm": {
+      "image": "data/observations/live/template_event_confirm_ok_text.png",
+      "left": 750,
+      "top": 465,
+      "right": 850,
+      "bottom": 525
+    },
+    "event_battle_choice": {
+      "image": "data/observations/live/template_event_battle_choice_roi.png",
+      "left": 340,
+      "top": 540,
+      "right": 570,
+      "bottom": 650
+    },
+    "battle_tile_normal": {
+      "image": "data/observations/live/template_battle_tile_normal_text.png",
+      "left": 1055,
+      "top": 590,
+      "right": 1185,
+      "bottom": 634
+    },
+    "battle_party": {
+      "image": "data/observations/live/template_battle_party_text.png",
+      "left": 1060,
+      "top": 568,
+      "right": 1220,
+      "bottom": 618
+    },
+    "battle_party_ready": {
+      "image": "data/observations/live/template_battle_party_ready_text.png",
+      "left": 785,
+      "top": 565,
+      "right": 850,
+      "bottom": 645
+    },
+    "ex_equipment": {
+      "image": "data/observations/live/template_ex_equipment_text.png",
+      "left": 705,
+      "top": 615,
+      "right": 875,
+      "bottom": 656
+    },
+    "ex_auto_dialog": {
+      "image": "data/observations/live/template_ex_auto_dialog_text.png",
+      "left": 750,
+      "top": 605,
+      "right": 830,
+      "bottom": 660
+    },
+    "ex_equipment_conflict": {
+      "image": "data/observations/live/template_ex_equipment_conflict_text.png",
+      "left": 380,
+      "top": 545,
+      "right": 900,
+      "bottom": 595
+    },
+    "battle_victory": {
+      "image": "data/observations/live/template_battle_victory_text.png",
+      "left": 1105,
+      "top": 615,
+      "right": 1195,
+      "bottom": 670
+    },
+    "battle_reward": {
+      "image": "data/observations/live/template_battle_reward_text.png",
+      "left": 1105,
+      "top": 615,
+      "right": 1195,
+      "bottom": 670
+    },
+    "character_bonus": {
+      "image": "data/observations/live/template_character_bonus_text.png",
+      "left": 210,
+      "top": 565,
+      "right": 330,
+      "bottom": 605
+    },
+    "item_reward": {
+      "image": "data/observations/live/template_item_reward_text.png",
+      "left": 585,
+      "top": 615,
+      "right": 700,
+      "bottom": 656
+    },
+    "relic_choice": {
+      "image": "data/observations/live/template_relic_choice_text.png",
+      "left": 210,
+      "top": 595,
+      "right": 330,
+      "bottom": 635
+    },
+    "shop": {
+      "image": "data/observations/live/template_shop_text.png",
+      "left": 280,
+      "top": 327,
+      "right": 370,
+      "bottom": 363
+    },
+    "shop_purchase_confirm": {
+      "image": "data/observations/live/template_shop_purchase_confirm_text.png",
+      "left": 755,
+      "top": 560,
+      "right": 825,
+      "bottom": 605
+    },
+    "shop_purchase_complete": {
+      "image": "data/observations/live/template_shop_purchase_complete_text.png",
+      "left": 605,
+      "top": 480,
+      "right": 675,
+      "bottom": 525
+    },
+    "shop_exit_confirm": {
+      "image": "data/observations/live/template_shop_exit_confirm_text.png",
+      "left": 755,
+      "top": 480,
+      "right": 825,
+      "bottom": 525
+    }
   },
   "targets": {
-    "出発": {"image": "data/observations/live/current_screen.png", "left": 640, "top": 100, "right": 920, "bottom": 500},
-    "ラビリンス": {"image": "data/observations/live/tap_02_depart_card.png", "left": 1050, "top": 465, "right": 1255, "bottom": 615},
-    "フォレスティエ": {"image": "data/observations/live/run2_depart_screen.png", "left": 930, "top": 170, "right": 1250, "bottom": 630},
-    "ギルド選択確認": {"image": "data/observations/live/current_after_failed_guild.png", "left": 800, "top": 590, "right": 1080, "bottom": 690},
-    "マップ": {"image": "data/observations/live/current_after_bonus_timeout.png", "left": 0, "top": 600, "right": 180, "bottom": 719},
-    "左BOSS": {"image": "data/observations/live/after_character_join_close.png", "left": 620, "top": 10, "right": 720, "bottom": 90},
-    "右BOSS": {"image": "data/observations/live/after_character_join_close.png", "left": 770, "top": 10, "right": 880, "bottom": 90},
-    "閉じる": {"image": "data/observations/live/task_boss_gacha_left_1.png", "left": 500, "top": 540, "right": 780, "bottom": 700},
-    "出発ボーナス閉じる": {"image": "data/observations/live/run2_bonus.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
-    "キャラ加入閉じる": {"image": "data/observations/live/after_initial_character_selection.png", "left": 500, "top": 540, "right": 780, "bottom": 630},
-    "撤退する": {"image": "data/observations/live/after_character_join_close.png", "left": 800, "top": 610, "right": 1030, "bottom": 700},
-    "撤退確認OK": {"image": "data/observations/live/current_after_withdraw_timeout.png", "left": 650, "top": 440, "right": 950, "bottom": 550},
-    "移動先確認OK": {"image": "data/observations/live/after_map_node_tap.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
-    "イベント移動OK": {"image": "data/observations/live/task_move_confirm_event_0001_source.png", "left": 650, "top": 450, "right": 950, "bottom": 550},
-    "イベント通常選択": {"image": "data/observations/live/current_now.png", "left": 340, "top": 540, "right": 570, "bottom": 650},
-    "挑戦する": {"image": "data/observations/live/after_move_confirm_ok.png", "left": 1000, "top": 570, "right": 1240, "bottom": 660},
-    "バトル開始": {"image": "data/observations/live/after_ex_conflict_cancel.png", "left": 1030, "top": 560, "right": 1240, "bottom": 660},
-    "EX装備": {"image": "data/observations/live/after_battle_party_cards.png", "left": 780, "top": 560, "right": 850, "bottom": 660},
-    "おまかせ装備": {"image": "data/observations/live/after_ex_equipment_open.png", "left": 650, "top": 590, "right": 930, "bottom": 680},
-    "EX自動設定OK": {"image": "data/observations/live/after_ex_auto.png", "left": 650, "top": 590, "right": 930, "bottom": 680},
-    "EX装備競合警告": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 380, "top": 540, "right": 900, "bottom": 600},
-    "EX競合キャンセル": {"image": "data/observations/live/after_ex_auto_confirm.png", "left": 50, "top": 590, "right": 340, "bottom": 680},
-    "勝利次へ": {"image": "data/observations/live/battle_result_poll_1.png", "left": 960, "top": 600, "right": 1260, "bottom": 690},
-    "報酬次へ": {"image": "data/observations/live/after_victory_next.png", "left": 960, "top": 600, "right": 1260, "bottom": 690},
-    "キャラボーナス選択": {"image": "data/observations/live/current_second_bonus.png", "left": 160, "top": 530, "right": 380, "bottom": 640},
-    "アイテム報酬閉じる": {"image": "data/observations/live/current_map_after_event.png", "left": 500, "top": 590, "right": 780, "bottom": 680},
-    "遺物選択": {"image": "data/observations/live/current_connect_screen.png", "left": 160, "top": 560, "right": 380, "bottom": 670},
-    "ショップ購入1": {"image": "data/observations/live/current_shop.png", "left": 230, "top": 315, "right": 420, "bottom": 380},
-    "ショップ購入2": {"image": "data/observations/live/current_shop.png", "left": 625, "top": 315, "right": 815, "bottom": 380},
-    "ショップ購入3": {"image": "data/observations/live/current_shop.png", "left": 1015, "top": 315, "right": 1205, "bottom": 380},
-    "購入確認OK": {"image": "data/observations/live/current_after_shop_attempt.png", "left": 650, "top": 540, "right": 930, "bottom": 620},
-    "購入完了OK": {"image": "data/observations/live/current_shop_after_purchase.png", "left": 500, "top": 460, "right": 780, "bottom": 540},
-    "ショップ終了OK": {"image": "data/observations/live/current_after_shop_close.png", "left": 650, "top": 460, "right": 930, "bottom": 540},
-    "ショップ閉じる": {"image": "data/observations/live/current_shop_after_purchase2.png", "left": 950, "top": 600, "right": 1240, "bottom": 690},
-    "挑戦中": {"image": "data/observations/live/debug_after_labyrinth_entry.png", "left": 730, "top": 340, "right": 850, "bottom": 390}
+    "出発": {
+      "image": "data/observations/live/template_depart_button_text.png",
+      "left": 755,
+      "top": 378,
+      "right": 825,
+      "bottom": 420
+    },
+    "ラビリンス": {
+      "image": "data/observations/live/template_quest_labyrinth_text.png",
+      "left": 1062,
+      "top": 563,
+      "right": 1247,
+      "bottom": 590
+    },
+    "フォレスティエ": {
+      "image": "data/template_migration/templates/guild_cards/forestier.png",
+      "left": 930,
+      "top": 170,
+      "right": 1250,
+      "bottom": 630
+    },
+    "ギルド選択確認": {
+      "image": "data/observations/live/optimized/template_targets.png",
+      "left": 800,
+      "top": 590,
+      "right": 1080,
+      "bottom": 690
+    },
+    "マップ": {
+      "image": "data/observations/live/optimized/template_targets_2.png",
+      "left": 0,
+      "top": 600,
+      "right": 180,
+      "bottom": 719
+    },
+    "左BOSS": {
+      "image": "data/observations/live/template_BOSS_compact.png",
+      "left": 640,
+      "top": 20,
+      "right": 700,
+      "bottom": 80
+    },
+    "右BOSS": {
+      "image": "data/observations/live/template_BOSS_2_compact.png",
+      "left": 790,
+      "top": 20,
+      "right": 850,
+      "bottom": 80
+    },
+    "閉じる": {
+      "image": "data/observations/live/template_close_text_compact.png",
+      "left": 590,
+      "top": 613,
+      "right": 675,
+      "bottom": 652
+    },
+    "お知らせウィンドウタイトル": {
+      "image": "data/observations/live/template_task_notice_window_title_compact.png",
+      "left": 580,
+      "top": 35,
+      "right": 705,
+      "bottom": 75
+    },
+    "お知らせ閉じる": {
+      "image": "data/observations/live/template_task_notice_close_text.png",
+      "left": 580,
+      "top": 615,
+      "right": 700,
+      "bottom": 665
+    },
+    "出発ボーナス閉じる": {
+      "image": "data/observations/live/optimized/template_targets_4.png",
+      "left": 500,
+      "top": 590,
+      "right": 780,
+      "bottom": 680
+    },
+    "キャラ加入閉じる": {
+      "image": "data/observations/live/optimized/template_targets_5.png",
+      "left": 500,
+      "top": 540,
+      "right": 780,
+      "bottom": 630
+    },
+    "撤退する": {
+      "image": "data/observations/live/template_withdraw_text.png",
+      "left": 875,
+      "top": 625,
+      "right": 1005,
+      "bottom": 678
+    },
+    "撤退確認OK": {
+      "image": "data/observations/live/optimized/template_OK.png",
+      "left": 650,
+      "top": 440,
+      "right": 950,
+      "bottom": 550
+    },
+    "移動先確認OK": {
+      "image": "data/observations/live/optimized/template_OK_2.png",
+      "left": 650,
+      "top": 450,
+      "right": 950,
+      "bottom": 550
+    },
+    "イベント移動OK": {
+      "image": "data/observations/live/optimized/template_OK_3.png",
+      "left": 650,
+      "top": 450,
+      "right": 950,
+      "bottom": 550
+    },
+    "イベント通常選択": {
+      "image": "data/observations/live/optimized/template_targets_7.png",
+      "left": 340,
+      "top": 540,
+      "right": 570,
+      "bottom": 650
+    },
+    "挑戦する": {
+      "image": "data/observations/live/optimized/template_targets_8.png",
+      "left": 1000,
+      "top": 570,
+      "right": 1240,
+      "bottom": 660
+    },
+    "バトル開始": {
+      "image": "data/observations/live/optimized/template_targets_9.png",
+      "left": 1030,
+      "top": 560,
+      "right": 1240,
+      "bottom": 660
+    },
+    "EX装備": {
+      "image": "data/observations/live/optimized/template_EX.png",
+      "left": 780,
+      "top": 560,
+      "right": 850,
+      "bottom": 660
+    },
+    "おまかせ装備": {
+      "image": "data/observations/live/optimized/template_targets_10.png",
+      "left": 650,
+      "top": 590,
+      "right": 930,
+      "bottom": 680
+    },
+    "EX自動設定OK": {
+      "image": "data/observations/live/optimized/template_EX_OK.png",
+      "left": 650,
+      "top": 590,
+      "right": 930,
+      "bottom": 680
+    },
+    "EX装備競合警告": {
+      "image": "data/observations/live/optimized/template_EX_2.png",
+      "left": 380,
+      "top": 540,
+      "right": 900,
+      "bottom": 600
+    },
+    "EX競合キャンセル": {
+      "image": "data/observations/live/optimized/template_EX_3.png",
+      "left": 50,
+      "top": 590,
+      "right": 340,
+      "bottom": 680
+    },
+    "勝利次へ": {
+      "image": "data/observations/live/optimized/template_targets_11.png",
+      "left": 960,
+      "top": 600,
+      "right": 1260,
+      "bottom": 690
+    },
+    "報酬次へ": {
+      "image": "data/observations/live/optimized/template_targets_12.png",
+      "left": 960,
+      "top": 600,
+      "right": 1260,
+      "bottom": 690
+    },
+    "キャラボーナス選択": {
+      "image": "data/observations/live/optimized/template_targets_13.png",
+      "left": 160,
+      "top": 530,
+      "right": 380,
+      "bottom": 640
+    },
+    "アイテム報酬閉じる": {
+      "image": "data/observations/live/optimized/template_targets_14.png",
+      "left": 500,
+      "top": 590,
+      "right": 780,
+      "bottom": 680
+    },
+    "遺物選択": {
+      "image": "data/observations/live/optimized/template_targets_15.png",
+      "left": 160,
+      "top": 560,
+      "right": 380,
+      "bottom": 670
+    },
+    "ショップ購入1": {
+      "image": "data/observations/live/optimized/template_1.png",
+      "left": 230,
+      "top": 315,
+      "right": 420,
+      "bottom": 380
+    },
+    "ショップ購入2": {
+      "image": "data/observations/live/optimized/template_2.png",
+      "left": 625,
+      "top": 315,
+      "right": 815,
+      "bottom": 380
+    },
+    "ショップ購入3": {
+      "image": "data/observations/live/optimized/template_3.png",
+      "left": 1015,
+      "top": 315,
+      "right": 1205,
+      "bottom": 380
+    },
+    "購入確認OK": {
+      "image": "data/observations/live/optimized/template_OK_4.png",
+      "left": 650,
+      "top": 540,
+      "right": 930,
+      "bottom": 620
+    },
+    "購入完了OK": {
+      "image": "data/observations/live/optimized/template_OK_5.png",
+      "left": 500,
+      "top": 460,
+      "right": 780,
+      "bottom": 540
+    },
+    "ショップ終了OK": {
+      "image": "data/observations/live/optimized/template_OK_6.png",
+      "left": 650,
+      "top": 460,
+      "right": 930,
+      "bottom": 540
+    },
+    "ショップ閉じる": {
+      "image": "data/observations/live/optimized/template_targets_16.png",
+      "left": 950,
+      "top": 600,
+      "right": 1240,
+      "bottom": 690
+    },
+    "挑戦中": {
+      "image": "data/observations/live/template_challenge_active_text.png",
+      "left": 745,
+      "top": 345,
+      "right": 830,
+      "bottom": 375
+    }
   }
 }
-
-

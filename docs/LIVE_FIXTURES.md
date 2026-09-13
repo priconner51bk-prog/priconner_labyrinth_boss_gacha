@@ -12,6 +12,8 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 
 `screen_templates` の不足がなく、画面サイズが一致していれば、テンプレートを再取得せず実行できます。
 
+ライブテンプレートの画像ファイル名は `template_` 接頭辞で統一します。再取得・切り出し時も `template_<用途>.png` とし、実機証跡やOCR入力画像とは分けて保存します。
+
 ## 初回または再取得が必要な場合
 
 1. BlueStacks を検証済みの表示設定（Android クライアント `1280x720`）で起動します。
