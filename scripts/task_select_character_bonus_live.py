@@ -36,7 +36,7 @@ def _character_bonus_by_layout(capture: AdbScreenCapture) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="キャラ加入ボーナス候補を選択")
     parser.add_argument("--choice", type=int, choices=(1, 2, 3))
-    parser.add_argument("--auto", action="store_true", help="OCRで最初に読めた候補を選ぶ")
+    parser.add_argument("--auto", action="store_true", help="テンプレート登録後に候補を自動選択")
     parser.add_argument("--manual-confirmed", action="store_true", help="指定番号をテンプレート確認だけで高速選択")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()

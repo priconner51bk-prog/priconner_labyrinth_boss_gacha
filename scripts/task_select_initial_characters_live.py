@@ -54,10 +54,10 @@ def _observe_initial_char(capture, probe, evidence_path: Path) -> str | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="OCR確認済みカードだけを初期選択")
+    parser = argparse.ArgumentParser(description="テンプレート確認済みカードだけを初期選択")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--indices", help="選択するカード番号（例: 6,7,8）")
-    group.add_argument("--auto", action="store_true", help="OCR確認済みカードから決定論的に3枚選ぶ")
+    group.add_argument("--auto", action="store_true", help="確認済みカードから決定論的に3枚選ぶ")
     parser.add_argument("--manual-confirmed", action="store_true",
                         help="ユーザーが画面で確認済みの番号を、カード画像の存在だけ検証して選択")
     parser.add_argument("--serial", default="127.0.0.1:5555")

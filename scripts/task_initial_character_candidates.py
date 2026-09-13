@@ -1,4 +1,4 @@
-"""初期キャラ候補の実機OCR（task_種別、入力は行わない）。"""
+"""初期キャラ候補をキャプチャし、手動確認用に保存する実機タスク。"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from vision.template_screen_probe import load_template_probe_config
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="初期キャラ候補をカード単位OCR")
+    parser = argparse.ArgumentParser(description="初期キャラ候補をカード単位で保存")
     parser.add_argument("--serial", default="127.0.0.1:5555")
     parser.add_argument("--output", type=Path, default=ROOT / "data/observations/live/initial_character_candidates.png")
     parser.add_argument("--min-confidence", type=float, default=0.80)

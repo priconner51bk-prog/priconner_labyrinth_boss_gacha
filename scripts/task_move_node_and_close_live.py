@@ -18,8 +18,8 @@ def run(script: str, args: list[str]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="マス選択・移動確認・ダイアログ終了をスクリプトで実行")
-    parser.add_argument("--x", type=int, required=True, help="OCRで確認済みマスの中心X")
-    parser.add_argument("--y", type=int, required=True, help="OCRで確認済みマスの中心Y")
+    parser.add_argument("--x", type=int, required=True, help="確認済みマスの中心X")
+    parser.add_argument("--y", type=int, required=True, help="確認済みマスの中心Y")
     parser.add_argument("--type", choices=("normal", "extreme", "hell", "relic", "connect_sign", "shop", "event"), required=True)
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()

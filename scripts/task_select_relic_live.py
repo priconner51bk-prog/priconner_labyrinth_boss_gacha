@@ -25,7 +25,7 @@ def _screen_token(capture: AdbScreenCapture) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="遺物候補をOCR確認して選択")
+    parser = argparse.ArgumentParser(description="遺物候補をテンプレート確認して選択")
     parser.add_argument("--choice", type=int, choices=(1, 2, 3))
     parser.add_argument("--auto", action="store_true", help="廃止済み。手動choiceを指定する")
     parser.add_argument("--serial", default="127.0.0.1:5555")
