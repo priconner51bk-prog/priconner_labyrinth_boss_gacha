@@ -23,6 +23,8 @@ Thumbs.db
 # the runtime observation directory so committed fixtures remain visible.
 data/observations/
 **/data/observations/
+# Runtime evidence stays local; only explicitly force-added template_*.png files
+# are eligible for publication.
 data/**/*.jsonl
 data/**/*.log
 
