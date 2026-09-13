@@ -17,8 +17,6 @@ from typing import Protocol
 
 from decision.timing import AdaptiveWaitPolicy, wait_until_hidden, wait_until_visible
 
-# 通常の画面遷移は短く確認し、戦闘結果だけ十分に待つ。
-FAST_TRANSITION_TIMEOUT_SECONDS = 3
 # 画面プローブを持たない互換アダプター向けの最小間隔。
 # 実機ADBは画面変化検知が優先されるため、ここで2秒を固定しない。
 SCRIPT_BUTTON_INTERVAL_SECONDS = 0.30
@@ -27,7 +25,6 @@ THREE_CHOICE_ORDER = (3, 2, 1)
 HELL_TILE_AVOID_AREAS = frozenset({4, 5})
 HELL_TILE_RELIC_LEVEL_THRESHOLD = 15
 ROUTE_TILE_PRIORITY = ("Extreme", "通常", "遺物", "コネクトサイン", "ショップ", "イベント", "ボス", "HELL")
-COMPOSITION_REQUIRED_STAGES = frozenset({"3-5"})
 
 # BlueStacksのADB画面はウィンドウ枠を含まない1280x720座標を使用する。
 ADB_SERIAL = "127.0.0.1:5555"
@@ -744,18 +741,6 @@ class RouteStep:
     label: str
     user_check: bool = False
 
-
-FIXED_STEPS = (
-    RouteStep("クエスト"),
-    RouteStep("ラビリンス"),
-    RouteStep("出発"),
-    RouteStep("フォレスティエ"),
-    RouteStep("選択する"),
-    RouteStep("難易度確認"),
-    RouteStep("難易度10"),
-    RouteStep("出発する"),
-    RouteStep("マップ"),
-)
 
 # 遺物マスは移動・確認をスクリプトで処理し、候補比較だけユーザーへ返す。
 RELIC_TILE_STEPS = (
