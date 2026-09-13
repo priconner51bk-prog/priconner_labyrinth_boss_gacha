@@ -842,59 +842,6 @@ def choose_relic(candidates: list[dict]) -> int:
     )
 
 
-def run_fixed_route(adapter: ScreenAdapter, *, auto_select: bool = False) -> str:
-    """定型部分だけ進め、判断地点でユーザー確認へ返す。"""
-    for step in FIXED_STEPS:
-        if step.label in FORBIDDEN:
-            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
-        if step.user_check:
-            if auto_select and step.label == "遺物選択":
-                break
-            return f"ユーザー確認待ち: {step.label}"
-        if not adapter.is_visible(step.label):
-            return f"画面確認待ち: {step.label}"
-        click_and_wait(adapter, step.label)
-    return "ユーザー確認待ち: ボス確認"
-
-
-def run_departure_script(
-    adapter: ScreenAdapter,
-    *,
-    guild_label: str = "フォレスティエ",
-    difficulty_label: str = "難易度10",
-) -> str:
-    """ホーム画面から出発完了までを固定順で実行する。"""
-    if guild_label not in {"フォレスティエ", "リトルリリカル", "自警団（カオン）"}:
-        raise ValueError(f"未承認のギルドです: {guild_label}")
-    if difficulty_label != "難易度10":
-        raise ValueError("現在は難易度10のみ対応しています")
-    steps = ("クエスト", "ラビリンス", "出発", guild_label, "選択する", "難易度確認", difficulty_label, "出発する")
-    for label in steps:
-        if label in FORBIDDEN:
-            raise RuntimeError(f"禁止操作を拒否しました: {label}")
-        if not adapter.is_visible(label):
-            return f"画面確認待ち: {label}"
-        click_and_wait(adapter, label)
-    return "出発完了"
-
-
-def choose_route_tile(tile: str) -> str:
-    """ユーザーが決めたマスだけをスクリプトへ渡す境界。"""
-    if tile in FORBIDDEN:
-        raise ValueError("帰還する／終了するは絶対に選択できません")
-    return tile
-
-
-def enter_route_without_choice(adapter: ScreenAdapter, tile_label: str) -> str:
-    """ルート選択肢がない場合の即時進入。座標確認や追加判断を挟まない。"""
-    if tile_label in FORBIDDEN:
-        raise ValueError("禁止された帰還操作です")
-    if not adapter.is_visible(tile_label):
-        return f"画面確認待ち: {tile_label}"
-    click_and_wait(adapter, tile_label)
-    return f"即時進入: {tile_label}"
-
-
 def close_optional_dialogs(adapter: ScreenAdapter) -> str:
     """任意ダイアログだけを素早く処理し、対象がなければ即終了する。"""
     closed = False
