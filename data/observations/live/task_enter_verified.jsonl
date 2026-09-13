@@ -1,0 +1,1 @@
+{"serial":"emulator-5554","task":"enter_labyrinth","steps":["restart_app","title_click","quest_menu","labyrinth_top"],"screen_id":"labyrinth_top","status":"verified","evidence_png":"task_enter_verified.png"}
