@@ -207,7 +207,7 @@ def ensure_adb_connection(
     try:
         subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
         return
-    except (OSError, subprocess.SubprocessError) as first_error:
+    except (OSError, subprocess.SubprocessError):
         try:
             restart_adb_connection(serial=serial, adb_command=adb_command, timeout_seconds=timeout_seconds)
             subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
@@ -330,7 +330,6 @@ def run_adb_swipe(
             last_error = None
             break
         except subprocess.CalledProcessError as exc:
-            last_error = exc
             if attempt == 2:
                 raise
             time.sleep(0.1 * (attempt + 1))

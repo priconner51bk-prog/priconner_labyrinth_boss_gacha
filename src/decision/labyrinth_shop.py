@@ -47,7 +47,6 @@ def purchase_all_then_refresh(
     for index, item in enumerate(candidates[:3]):
         price = _number(item, "price", "cost", "rupee", default=-1)
         if price >= 0 and price <= remaining:
-            level = _number(item, "level", "relic_level", "stars")
             actions.append(ShopDecision("buy", index, f"候補{index + 1}を購入", price))
             remaining -= price
 

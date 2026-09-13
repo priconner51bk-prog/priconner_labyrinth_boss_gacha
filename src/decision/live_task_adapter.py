@@ -109,6 +109,7 @@ def execute_live_script(
             cwd=str(ROOT),
             capture_output=True,
             text=True,
+            check=False,
             encoding="utf-8",
             errors="replace",
             timeout=timeout_seconds,

@@ -23,7 +23,7 @@ def main() -> int:
     try:
         screen = probe.observe_screen()
     except Exception as exc:
-        print(f"screen_id=unknown")
+        print("screen_id=unknown")
         print(f"safety_stop=screen_observation_failed:{type(exc).__name__}")
         print(f"error={screen_error_message(exc, args.serial)}")
         return 2

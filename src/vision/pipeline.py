@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
 from .capture import CapturedFrame
 from .observation import ScreenObservation, ScreenObserver

@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 import re
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
