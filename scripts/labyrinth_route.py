@@ -323,7 +323,6 @@ def run_adb_swipe(
         str(actual_start[0]), str(actual_start[1]), str(actual_end[0]),
         str(actual_end[1]), str(duration_ms),
     ]
-    last_error = None
     for attempt in range(3):
         try:
             subprocess.run(command, check=True, capture_output=True, text=True)
