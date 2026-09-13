@@ -327,9 +327,8 @@ def run_adb_swipe(
     for attempt in range(3):
         try:
             subprocess.run(command, check=True, capture_output=True, text=True)
-            last_error = None
             break
-        except subprocess.CalledProcessError as exc:
+        except subprocess.CalledProcessError:
             if attempt == 2:
                 raise
             time.sleep(0.1 * (attempt + 1))

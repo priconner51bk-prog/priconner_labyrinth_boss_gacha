@@ -510,7 +510,6 @@ class LabyrinthOrchestrator:
         return cls(state, **kwargs)
 
     def _handler_for(self, task: Task) -> tuple[TaskHandler | None, str]:
-        counts = self.state.get("task_execution_counts", {})
         # Deterministic/script handlers always win.  AI is an explicit repair
         # fallback only for tasks listed in ai_repair_tasks; it is never the
         # default owner of a first execution.
