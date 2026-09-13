@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import cv2
 
@@ -13,9 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vision.capture import AdbScreenCapture
-from vision.labyrinth_character_ocr import recognize_character_cards
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.ocr_service import OCRServiceAdapter
 from vision.template_screen_probe import load_template_probe_config
 
 
@@ -31,20 +28,9 @@ def main() -> int:
     probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     try:
         screen_id = probe.observe_screen()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert probe failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"screen_observation_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
-    if screen_id != "initial_char":
-        # 青い見出しを持つキャラ選択画面は、お知らせの簡易判定と
-        # 外観が似るため、OCRで見出しを再確認する。
-        fallback = args.output.with_name("initial_character_screen_check.png")
-        try:
-            capture.capture(fallback)
-            fallback_text = "".join(line.text for line in OCRServiceAdapter(language="jpn").recognize(str(fallback)))
-            if "キャラ選択" in fallback_text:
-                screen_id = "initial_char"
-        except Exception:
-            pass
     if screen_id != "initial_char":
         print(json.dumps({"status": "safety_stop", "reason": f"unexpected_screen:{screen_id!r}"}, ensure_ascii=False))
         return 2
@@ -53,18 +39,9 @@ def main() -> int:
     if image is None:
         print(json.dumps({"status": "safety_stop", "reason": "capture_failed"}, ensure_ascii=False))
         return 2
-    config = json.loads((ROOT / "configs/labyrinth_ocr_regions.json").read_text(encoding="utf-8"))
-    regions = config.get("regions", {}).get("initial_character_cards")
-    if not isinstance(regions, list) or len(regions) < 8:
-        print(json.dumps({"status": "safety_stop", "reason": "character_card_regions_invalid"}, ensure_ascii=False))
-        return 2
-    ocr = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn")
-    candidates = recognize_character_cards(str(args.output), ocr, regions, min_confidence=args.min_confidence, preprocess=True)
-    manifest = args.output.with_name(args.output.stem + "_manifest.json")
-    manifest.write_text(json.dumps({"source": "initial", "screen": str(args.output), "candidates": candidates}, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"status": "ok" if candidates else "safety_stop", "screen_id": screen_id,
-                      "candidates": candidates, "manifest": str(manifest), "reason": None if candidates else "character_names_not_recognized"}, ensure_ascii=False))
-    return 0 if candidates else 2
+    print(json.dumps({"status": "user_assist_required", "screen_id": screen_id,
+                      "screenshot": str(args.output), "reason": "candidate_names_require_manual_confirmation_without_ocr"}, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":
