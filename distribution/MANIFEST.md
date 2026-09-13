@@ -1,7 +1,7 @@
 # 配布最小構成マニフェスト
 
-生成物: `distribution/priconner_labyrinth_boss_gacha_minimal_ocr_removed_20260913_v3.zip`
-検査結果: 要再生成。現行ZIPは66エントリで、`live_screen_templates.json` の64参照に対してライブテンプレートを4件しか含まないため、配布物として使用しない。
+生成物: `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260913_v4.zip`
+検査結果: 119エントリ、設定参照27件、参照切れ0件、除外対象混入0件。
 
 ## ZIP配布対象
 
@@ -40,4 +40,4 @@ ZIP作成後は、内容一覧に上記の除外対象が混入していない�
 
 ## 現行ZIPの扱い
 
-現行v3 ZIPはテンプレート不足のため公開・配布に使用しない。必要な実行経路を確定し、設定参照と配布テンプレートが一致するZIPを再生成してからR-12を再評価する。
+旧v3 ZIPはテンプレート不足のため公開・配布に使用しない。v4はガチャ経路に必要な設定参照とテンプレートが一致していることを検査済み。
