@@ -739,34 +739,6 @@ def open_map_and_confirm_boss_names(
     )
 
 
-def challenge_confirmed_boss(
-    adapter: ScreenAdapter,
-    *,
-    boss_name_confirmed: bool,
-    stage: str | None = None,
-    composition_confirmed: bool = False,
-) -> str:
-    """ボス名と必要な編成の確認後だけ挑戦ボタンを押す。"""
-    if not boss_name_confirmed:
-        return "ユーザー確認待ち: ボス名"
-    if stage in COMPOSITION_REQUIRED_STAGES and not composition_confirmed:
-        return "ユーザー確認待ち: 編成"
-    label = "挑戦する"
-    if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
-        return f"画面確認待ち: {label}"
-    click_and_wait(adapter, label)
-    return "ボス名確認済み。挑戦します"
-
-
-def confirm_three_parties_and_start(adapter: ScreenAdapter) -> str:
-    """パーティ1・2・3を順に表示確認し、パーティ3の状態で開始する。"""
-    for label in ("パーティ1", "パーティ2", "パーティ3", "バトル開始"):
-        if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(label):
-            return f"画面確認待ち: {label}"
-        click_and_wait(adapter, label)
-    return "3編成を確認し、パーティ3でバトル開始しました"
-
-
 @dataclass(frozen=True)
 class RouteStep:
     label: str
