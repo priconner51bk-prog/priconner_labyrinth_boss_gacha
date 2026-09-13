@@ -1,19 +1,18 @@
-"""戦闘結果をOCRポーリングする実機タスク（入力なし）。"""
+"""戦闘結果をテンプレートでポーリングする実機タスク（入力なし）。"""
 
 from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.ocr_service import OCRServiceAdapter
+from vision.template_screen_probe import load_template_probe_config
 
 
 def main() -> int:
@@ -29,23 +28,14 @@ def main() -> int:
     if args.timeout <= 0 or args.interval <= 0:
         parser.error("timeout/interval must be positive")
     capture = AdbScreenCapture(serial=args.serial)
-    ocr = OCRServiceAdapter(language="jpn")
+    probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     started = time.monotonic()
     poll = 0
     while time.monotonic() - started < args.timeout:
         poll += 1
-        path = ROOT / "data/observations/live" / f"battle_result_poll_{poll}.png"
-        capture.capture(path)
-        text = "".join(line.text for line in ocr.recognize(str(path)))
-        compact = text.replace(" ", "")
-        outcome = any(token in compact for token in ("勝利", "敗北", "WIN", "FAILED", "LOSE", "LOSE!"))
-        result_button = any(token in compact for token in (
-            "次へ", "終了する", "リトライ", "再挑戦", "撤退", "帰還"
-        ))
-        # 戦闘中の一時表示や結果タイトルだけでは進めない。
-        # 勝敗表示と、結果画面の操作ボタンが同じ取得フレームに出た時だけ確定する。
-        if outcome and result_button:
-            print(json.dumps({"status": "result_detected", "text": text, "poll": poll,
+        screen = probe.observe_screen()
+        if screen in {"battle_victory", "battle_reward"}:
+            print(json.dumps({"status": "result_detected", "screen_id": screen, "poll": poll,
                               "elapsed_seconds": round(time.monotonic() - started, 2)}, ensure_ascii=False))
             return 0
         time.sleep(args.interval)

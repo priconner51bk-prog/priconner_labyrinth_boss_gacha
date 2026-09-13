@@ -1,6 +1,13 @@
 {
   "threshold": 0.95,
   "screens": {
+    "title": {
+      "image": "data/observations/live/template_title_start_text.png",
+      "left": 300,
+      "top": 570,
+      "right": 980,
+      "bottom": 720
+    },
     "labyrinth_top": {
       "image": "data/observations/live/template_depart_button_text.png",
       "left": 755,
