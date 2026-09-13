@@ -2,13 +2,13 @@
 
 H2cの実行前にCloudで確認できる項目だけを定義する。認証、remote変更、pushは行わない。
 
-- [ ] 最終公開URLが確定している
+- [x] 最終公開URLが確定している（`origin`: `https://github.com/priconner51bk-prog/priconner_labyrinth_boss_gacha`）
 - [x] 公開対象と除外対象が `docs/PUBLISHING.md` と一致している
 - [x] 実機キャプチャ、OCR結果、操作ログ、モデル、ローカル設定が公開対象外である
 - [x] 履歴方針がユーザー承認済みである
 - [x] pushの明示承認がある
 
-## 2026-09-13 実測根拠
+## 2026-09-14 実測根拠
 
 - 公開先: `origin` は GitHub リポジトリを指す（`git remote -v`）。
 - 著者情報・履歴方針: ユーザー指定のメールアドレスと「リリース確定時に新しい初回コミット」方針を確認済み。
