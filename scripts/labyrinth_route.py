@@ -22,25 +22,12 @@ FAST_TRANSITION_TIMEOUT_SECONDS = 3
 # 画面プローブを持たない互換アダプター向けの最小間隔。
 # 実機ADBは画面変化検知が優先されるため、ここで2秒を固定しない。
 SCRIPT_BUTTON_INTERVAL_SECONDS = 0.30
-EVENT_RESULT_OBSERVE_SECONDS = 4
-BATTLE_RESULT_TIMEOUT_SECONDS = 120
-# 固定待機は廃止。戦闘結果は画面ポーリングで検知する。
-BATTLE_SCRIPT_NAME = "戦闘スクリプト"
-BATTLE_START_SCENE = "戦闘開始"
-BATTLE_TILE_SCENE = "マス移動"
-BATTLE_VICTORY_SCENE = "戦闘勝利"
-BATTLE_DEFEAT_SCENE = "戦闘敗北"
-EXTREME_RELIC_SCENE = "遺物選択"
-EXTREME_CHARACTER_SCENE = "キャラ選択"
-SHOP_SCENE = "ショップ"
-COMPOSITION_REQUIRED_STAGES = frozenset({"3-5"})
-BATTLE_COMPOSITION_COUNT = 3
-EX_EQUIPMENT_MANUAL = True
-EX_EQUIPMENT_MANUAL_EXCEPTION_STAGES = frozenset({"3-5"})
+# 旧ルート補助関数が受け付ける値と判定境界。
+THREE_CHOICE_ORDER = (3, 2, 1)
 HELL_TILE_AVOID_AREAS = frozenset({4, 5})
 HELL_TILE_RELIC_LEVEL_THRESHOLD = 15
 ROUTE_TILE_PRIORITY = ("Extreme", "通常", "遺物", "コネクトサイン", "ショップ", "イベント", "ボス", "HELL")
-THREE_CHOICE_ORDER = (3, 2, 1)
+COMPOSITION_REQUIRED_STAGES = frozenset({"3-5"})
 
 # BlueStacksのADB画面はウィンドウ枠を含まない1280x720座標を使用する。
 ADB_SERIAL = "127.0.0.1:5555"
@@ -812,17 +799,6 @@ BATTLE_SCRIPT_SEQUENCE = BATTLE_EQUIPMENT_SEQUENCE + ("バトル開始",)
 BATTLE_SCRIPT_MANUAL_EX_SEQUENCE = ("バトル開始",)
 
 # 装備確定直後は、画面状態を判断せず必ずキャンセルして開始する。
-# シーン単位の一覧。実行側はシーン名で呼び出し、別フローを混在させない。
-SCRIPT_SCENES: Mapping[str, tuple[str, ...]] = {
-    f"{BATTLE_SCRIPT_NAME}/{BATTLE_START_SCENE}": BATTLE_SCRIPT_SEQUENCE,
-    f"{BATTLE_SCRIPT_NAME}/{BATTLE_TILE_SCENE}": ("マス選択", "移動先確認", "OK"),
-    f"{BATTLE_SCRIPT_NAME}/{BATTLE_VICTORY_SCENE}": ("次へ", "閉じる"),
-    f"{BATTLE_SCRIPT_NAME}/{BATTLE_DEFEAT_SCENE}": ("敗北", "ユーザー確認待ち"),
-    f"{BATTLE_SCRIPT_NAME}/{EXTREME_RELIC_SCENE}": ("遺物選択", "ユーザー確認待ち"),
-    f"{BATTLE_SCRIPT_NAME}/{EXTREME_CHARACTER_SCENE}": ("キャラ選択", "ユーザー確認待ち"),
-    f"{BATTLE_SCRIPT_NAME}/{SHOP_SCENE}": ("移動先確認OK",),
-}
-
 # 遺物マスは移動・確認をスクリプトで処理し、候補比較だけユーザーへ返す。
 RELIC_TILE_STEPS = (
     RouteStep("遺物マス"),
