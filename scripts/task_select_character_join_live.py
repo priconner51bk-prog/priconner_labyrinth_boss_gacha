@@ -3,10 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
-
-import cv2
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -15,7 +13,6 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr_service import OCRServiceAdapter
 from vision.template_screen_probe import load_template_probe_config
 
 
@@ -33,15 +30,8 @@ def main() -> int:
         print(json.dumps({"status": "safety_stop", "reason": "indices_must_be_three_unique_positions_1_to_24"}, ensure_ascii=False)); return 2
     cap = AdbScreenCapture(serial=args.serial)
     probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", cap)
-    frame = ROOT / "data/observations/live/task_character_join_confirm.png"
-    cap.capture(frame)
-    try:
-        lines = OCRServiceAdapter(language="jpn").recognize(str(frame))
-        text = "".join(line.text for line in lines).replace(" ", "")
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False)); return 2
-    if "仲間に勧誘" not in text or "勧誘する" not in text:
-        print(json.dumps({"status": "safety_stop", "reason": "character_join_screen_not_confirmed", "text": text}, ensure_ascii=False)); return 2
+    if probe.observe_screen() != "character_join" or not probe.target_visible("キャラ加入閉じる"):
+        print(json.dumps({"status": "safety_stop", "reason": "character_join_screen_not_confirmed"}, ensure_ascii=False)); return 2
     # Eight cards per row, fixed card centers on the verified 1280x720 layout.
     points = []
     for index in indices:
@@ -54,17 +44,12 @@ def main() -> int:
                     timing_policy=AdaptiveWaitPolicy(), screen_probe=probe.observe_screen,
                     require_screen_change=False, debug_capture_dir=ROOT / "data/observations/live",
                     debug_capture_prefix="task_character_join_select")
-        cap.capture(frame)
-        lines = OCRServiceAdapter(language="jpn").recognize(str(frame))
-        text = "".join(line.text for line in lines).replace(" ", "")
-        if "勧誘する" not in text:
-            raise RuntimeError("invite_button_not_confirmed")
         run_adb_coordinate_sequence([(1090, 635)], serial=args.serial, healthcheck=True,
             timing_policy=AdaptiveWaitPolicy(), screen_probe=probe.observe_screen,
             require_screen_change=True, previous_screen_token="character_join",
             debug_capture_dir=ROOT / "data/observations/live",
             debug_capture_prefix="task_character_join_invite")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"join_failed:{type(exc).__name__}", "indices": indices}, ensure_ascii=False)); return 2
     print(json.dumps({"status": "selected", "indices": indices}, ensure_ascii=False)); return 0
 
