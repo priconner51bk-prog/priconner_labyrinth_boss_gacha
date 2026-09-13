@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -16,8 +16,7 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-
+from vision.template_screen_probe import load_template_probe_config
 
 PARTY_POINTS = ((130, 120), (300, 120), (450, 120))
 
@@ -35,17 +34,11 @@ def main() -> int:
                         help="使用する編成数。未指定時は安全側に3（各5キャラ）")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
-    frame = ROOT / "data/observations/live/area_boss_party_verify.png"
-    capture.capture(frame)
-    try:
-        ocr = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn")
-        text = "".join(line.text for line in ocr.recognize(str(frame)) if line.confidence >= 0.80)
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False))
-        return 2
+    probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
+    screen = probe.observe_screen()
     # The first entry is a boss tile with a 挑戦する button; open the party
     # screen before selecting the requested 1–3 formations.
-    if "挑戦する" in text and "ボスバトルマス" in text:
+    if screen == "battle_tile_normal" and probe.target_visible("挑戦する"):
         try:
             previous = _screen_token(capture)
             run_adb_coordinate_sequence([(1135, 605)], serial=args.serial, healthcheck=True,
@@ -55,18 +48,14 @@ def main() -> int:
             # Transition animation can briefly leave the boss tile visible;
             # poll the party header instead of treating that transient frame
             # as a failure.
-            text = ""
             for _ in range(12):
-                capture.capture(frame)
-                text = "".join(line.text for line in ocr.recognize(str(frame)) if line.confidence >= 0.80)
-                if "パーティ編成" in text:
+                if probe.observe_screen() in {"battle_party", "battle_party_ready"}:
                     break
                 time.sleep(0.25)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
             print(json.dumps({"status": "safety_stop", "reason": f"area_boss_challenge_failed:{type(exc).__name__}"}, ensure_ascii=False))
             return 2
-    compact_text = text.replace(" ", "")
-    if not ("パーティ" in compact_text and "編成" in compact_text) or "バトル開始" not in compact_text:
+    if probe.observe_screen() not in {"battle_party", "battle_party_ready"} or not probe.target_visible("バトル開始"):
         print(json.dumps({"status": "safety_stop", "reason": "area_boss_party_screen_not_confirmed"}, ensure_ascii=False))
         return 2
     try:
@@ -75,7 +64,7 @@ def main() -> int:
                 timing_policy=AdaptiveWaitPolicy(), screen_probe=lambda: _screen_token(capture),
                 require_screen_change=False, previous_screen_token=_screen_token(capture),
                 debug_capture_dir=ROOT / "data/observations/live", debug_capture_prefix=f"task_area_boss_party_{index}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"area_boss_start_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
     print(json.dumps({

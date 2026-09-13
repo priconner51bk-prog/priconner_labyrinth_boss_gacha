@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import cv2
 
@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
+from vision.template_screen_probe import load_template_probe_config
 
 TAB_POINTS = {1: (130, 120), 2: (300, 120), 3: (450, 120)}
 CARD_POINTS = tuple((x, y) for y, xs in ((315, (145, 290, 435, 580, 725, 870, 1015, 1160)), (460, (145, 290, 435, 580, 725, 870, 1015, 1160))) for x in xs)
@@ -70,15 +70,8 @@ def main() -> int:
     parser.add_argument("--character-indices", help="編成するカード位置(1..16)を5個、カンマ区切り。未指定時は自動選択しない")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
-    frame = ROOT / "data/observations/live/area_boss_party_fill.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(device=choose_ocr_device("gpu:0"), language="jpn").recognize(str(frame))
-        text = "".join(line.text for line in lines if line.confidence >= 0.75)
-    except Exception as exc:
-        print(json.dumps({"status": "safety_stop", "reason": f"ocr_failed:{type(exc).__name__}"}, ensure_ascii=False))
-        return 2
-    if "パーティ編成" not in text:
+    probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
+    if probe.observe_screen() not in {"battle_party", "battle_party_ready"}:
         print(json.dumps({"status": "safety_stop", "reason": "area_boss_party_screen_not_confirmed"}, ensure_ascii=False))
         return 2
     try:
@@ -100,7 +93,7 @@ def main() -> int:
         members = _member_count(capture)
         if members != 5:
             raise RuntimeError(f"party_member_count_not_five:{members}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"party_fill_failed:{type(exc).__name__}"}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "filled", "party": args.party, "members": 5}, ensure_ascii=False))
