@@ -57,8 +57,8 @@ def main() -> int:
             print(json.dumps({"status": "safety_stop", "reason": "difficulty_screen_unchanged_after_action", "detail": difficulty_result}, ensure_ascii=False))
             return 2
     # Do not use the generic guild_select coordinate here: card ordering can
-    # place another guild under that point.  The dedicated task OCR-confirms
-    # the 美食殿 label before selecting it.
+    # place another guild under that point.  Delegate to the dedicated
+    # template-based task, which verifies the 美食殿 card before selecting it.
     if observe_screen() == "guild_select":
         guild = subprocess.run(
             [sys.executable, str(ROOT / "scripts/task_select_guild_live.py"), "--serial", args.serial],
