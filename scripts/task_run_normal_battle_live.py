@@ -17,8 +17,6 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.ocr_service import OCRServiceAdapter
 from vision.template_screen_probe import load_template_probe_config
 
 
@@ -152,53 +150,6 @@ def _unselected_card_points(capture: AdbScreenCapture) -> list[tuple[int, int]]:
     return points
 
 
-def _normal_tile_by_ocr(capture: AdbScreenCapture) -> bool:
-    """Fallback for dynamic templates that label a normal tile as boss_map."""
-    frame = ROOT / "data/observations/live/task_normal_tile_ocr.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text for line in lines if line.confidence >= 0.75).replace(" ", "")
-    # EXTREMEも挑戦ボタン以降は同一の編成・EX装備フローを使う。
-    return "バトルマス" in text and ("NORMAL" in text or "EXTREME" in text)
-
-
-def _battle_party_by_ocr(capture: AdbScreenCapture) -> bool:
-    """Fallback for the party screen when a dynamic template is misclassified."""
-    frame = ROOT / "data/observations/live/task_battle_party_ocr.png"
-    capture.capture(frame)
-    texts = []
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-        texts.append("".join(line.text for line in lines))
-    except Exception as exc:
-        print(json.dumps({"nonfatal_probe_error": "battle_party_paddle_ocr", "error_type": type(exc).__name__}, ensure_ascii=False), file=sys.stderr)
-    try:
-        lines = OCRServiceAdapter(language="jpn").recognize(str(frame))
-        texts.append("".join(line.text for line in lines))
-    except Exception as exc:
-        print(json.dumps({"nonfatal_probe_error": "battle_party_service_ocr", "error_type": type(exc).__name__}, ensure_ascii=False), file=sys.stderr)
-    text = "".join(texts).replace(" ", "")
-    # Character-invite screens also have a large blue lower-right button.
-    # Their invite wording is authoritative evidence that this is not a
-    # battle-party screen; never select cards or start a battle there.
-    if "仲間に勧誘" in text or "勧誘する" in text:
-        return False
-    # 戦闘マスのOCRがボタンや報酬欄を誤ってパーティ文言として
-    # 返すことがある。戦闘マス語彙を含むフレームは編成画面ではない。
-    if "バトルマス" in text or "挑戦する" in text:
-        return False
-    # The title is decorative and may be partially lost; the fixed
-    # "バトル開始" control is the stronger discriminator.
-    return "バトル開始" in text or ("パーティ" in text and "編成" in text)
-
-
 def _battle_party_by_layout(capture: AdbScreenCapture) -> bool:
     """Fallback for mojibake OCR: verify the fixed blue battle-start control."""
     frame = ROOT / "data/observations/live/task_battle_party_layout.png"
@@ -223,20 +174,6 @@ def _challenge_by_layout(capture: AdbScreenCapture) -> bool:
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     blue_ratio = float(((hsv[:, :, 0] > 90) & (hsv[:, :, 0] < 135) & (hsv[:, :, 1] > 80)).mean())
     return blue_ratio >= 0.20
-
-
-def _ex_equipment_by_ocr(capture: AdbScreenCapture) -> bool:
-    """Recognize the mandatory EX equipment screen despite template drift."""
-    frame = ROOT / "data/observations/live/task_ex_equipment_ocr.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text for line in lines).replace(" ", "")
-    return "EX装備" in text and ("おまかせ装備" in text or "装備確定" in text)
 
 
 def _other_characters_checkbox_checked(capture: AdbScreenCapture) -> bool:
@@ -265,19 +202,6 @@ def _all_priority_is_physical(capture: AdbScreenCapture) -> bool:
     blue = ((roi[:, :, 0] > 90) & (roi[:, :, 0] < 135)
             & (roi[:, :, 1] > 70) & (roi[:, :, 2] > 100))
     return float(blue.mean()) >= 0.12
-
-
-def _ex_auto_dialog_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/task_normal_ex_auto_dialog_resume.png"
-    capture.capture(frame)
-    try:
-        lines = PaddleOCRAdapter.from_default_models(
-            device=choose_ocr_device("gpu:0"), language="jpn"
-        ).recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines)
-    return "おまかせEX装備設定" in text and "全て" in text
 
 
 def _set_all_priority_physical(capture: AdbScreenCapture, *, serial: str) -> None:
@@ -346,7 +270,7 @@ def main() -> int:
             try:
                 screen = _tap(probe, (1120, 610), prefix="task_normal_challenge", serial=args.serial, previous=screen)
             except Exception:
-                # 遷移例外は許容するが、最新OCRで編成画面を証明するまで
+                # 遷移例外は許容するが、最新テンプレートで編成画面を証明するまで
                 # カード座標には触れない。
                 screen = "notice"
             if _wait_for_party_screen(capture):
