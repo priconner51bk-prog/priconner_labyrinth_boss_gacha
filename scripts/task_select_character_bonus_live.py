@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import cv2
 
@@ -16,20 +16,7 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.ocr import PaddleOCRAdapter, choose_ocr_device
-from vision.ocr_service import OCRServiceAdapter
 from vision.template_screen_probe import load_template_probe_config
-
-
-def _character_bonus_by_ocr(capture: AdbScreenCapture) -> bool:
-    frame = ROOT / "data/observations/live/character_bonus_screen_ocr.png"
-    capture.capture(frame)
-    try:
-        lines = OCRServiceAdapter(language="jpn").recognize(str(frame))
-    except Exception:
-        return False
-    text = "".join(line.text.replace(" ", "") for line in lines if line.confidence >= 0.75)
-    return "キャラ加入ボーナス" in text and text.count("選択する") >= 3
 
 
 def _character_bonus_by_layout(capture: AdbScreenCapture) -> bool:
@@ -59,7 +46,7 @@ def main() -> int:
     probe = load_template_probe_config(ROOT / "configs/live_screen_templates.json", capture)
     detected = probe.observe_screen()
     layout_confirmed = _character_bonus_by_layout(capture)
-    if detected != "character_bonus" and not (_character_bonus_by_ocr(capture) or layout_confirmed):
+    if detected != "character_bonus" and not layout_confirmed:
         print(json.dumps({"status": "safety_stop", "reason": "unexpected_screen"}, ensure_ascii=False))
         return 2
     frame = ROOT / "data/observations/live/character_bonus_candidates.png"
@@ -68,12 +55,10 @@ def main() -> int:
         if not probe.target_visible("キャラボーナス選択"):
             print(json.dumps({"status": "safety_stop", "reason": "selection_target_not_confirmed", "choice": args.choice}, ensure_ascii=False))
             return 2
-        lines = []
         names = []
     else:
-        ocr = OCRServiceAdapter(language="jpn")
-        lines = ocr.recognize(str(frame))
-        names = [line for line in lines if line.confidence >= 0.80 and line.bbox and 180 <= (line.bbox[1] + line.bbox[3]) / 2 <= 530]
+        print(json.dumps({"status": "user_assist_required", "reason": "manual_confirmed_required_without_ocr"}, ensure_ascii=False))
+        return 0
     if args.auto:
         if not names:
             print(json.dumps({"status": "safety_stop", "reason": "character_bonus_candidates_not_recognized"}, ensure_ascii=False))
@@ -83,7 +68,7 @@ def main() -> int:
         choice = 1 if center_x < 430 else 2 if center_x < 850 else 3
     else:
         choice = args.choice
-    if not args.manual_confirmed and not layout_confirmed and not any("選択する" in line.text for line in lines if line.confidence >= 0.80):
+    if not args.manual_confirmed and not layout_confirmed:
         print(json.dumps({"status": "safety_stop", "reason": "selection_target_not_confirmed", "choice": choice}, ensure_ascii=False))
         return 2
     x = (270, 640, 1010)[choice - 1]
@@ -93,7 +78,7 @@ def main() -> int:
                                     debug_capture_dir=ROOT / "data/observations/live",
                                     debug_capture_prefix="task_character_bonus_select",
                                     require_screen_change=True, previous_screen_token="character_bonus")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert input failures to safety_stop
         print(json.dumps({"status": "safety_stop", "reason": f"tap_failed:{type(exc).__name__}", "choice": choice}, ensure_ascii=False))
         return 2
     print(json.dumps({"status": "selected", "choice": choice}, ensure_ascii=False))
