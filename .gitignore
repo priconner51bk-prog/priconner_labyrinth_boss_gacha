@@ -4,6 +4,9 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+build/
+*.egg-info/
 .venv/
 venv/
 env/
@@ -30,6 +33,8 @@ data/**/*.log
 
 # Generated local reports and temporary investigation files.
 artifacts/
+reports/
+distribution/_staging_*/
 cloud_status.json
 _tmp_*.py
 
