@@ -1,7 +1,7 @@
 # 配布最小構成マニフェスト
 
-生成物: `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260913_v5.zip`
-検査結果: 118エントリ、設定参照27件、参照切れ0件、除外対象混入0件。
+生成物: `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260913_v6.zip`
+検査結果: 108エントリ、設定参照27件、参照切れ0件、除外対象混入0件。
 
 ## ZIP配布対象
 
@@ -40,4 +40,4 @@ ZIP作成後は、内容一覧に上記の除外対象が混入していない�
 
 ## 現行ZIPの扱い
 
-旧v3/v4 ZIPは使用しない。v5はガチャ経路に必要な設定参照とテンプレートが一致していることを検査済み。
+旧v3/v4/v5 ZIPは使用しない。v6はガチャ経路に必要な設定参照とテンプレートが一致していることを検査済み。
