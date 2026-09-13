@@ -6,16 +6,16 @@
 
 from __future__ import annotations
 
-import time
-import subprocess
 import random
 import re
-from pathlib import Path
+import subprocess
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Callable, Mapping, Protocol
+from pathlib import Path
+from typing import Protocol
 
 from decision.timing import AdaptiveWaitPolicy, wait_until_hidden, wait_until_visible
-
 
 # 通常の画面遷移は短く確認し、戦闘結果だけ十分に待つ。
 FAST_TRANSITION_TIMEOUT_SECONDS = 3
@@ -168,17 +168,7 @@ ADB_SCREEN_COORDINATES: Mapping[str, Mapping[str, tuple[int, int]]] = {
     "quest_menu": {"ラビリンス": (1150, 540)},
     "labyrinth_top": {"出発": (780, 390)},
     "character_join": {"閉じる": (640, 580)},
-    "battle_tile_normal": {"挑戦する": (1120, 610)},
-    "event_confirm": {"イベント移動OK": (785, 495)},
-    "event_battle_choice": {"イベント通常選択": (470, 590)},
     "item_reward": {"アイテム報酬閉じる": (640, 640)},
-    "relic_choice": {"遺物選択": (270, 620)},
-    "shop": {"ショップ購入1": (330, 350), "ショップ購入2": (720, 350), "ショップ購入3": (1110, 350)},
-    "shop_purchase_confirm": {"購入確認OK": (785, 575)},
-    "shop_purchase_complete": {"購入完了OK": (640, 495)},
-    "shop_exit_confirm": {"ショップ終了OK": (785, 495)},
-    "battle_party": {"バトル開始": (1135, 605)},
-    "ex_auto_dialog": {"EX自動設定OK": (785, 638)},
 }
 
 
@@ -188,6 +178,68 @@ def screen_coordinate(screen_id: str, label: str) -> tuple[int, int]:
         return ADB_SCREEN_COORDINATES[screen_id][label]
     except KeyError as exc:
         raise RuntimeError(f"画面固有座標が未登録です: {screen_id}/{label}") from exc
+
+
+def navigate_to_screen(
+    target_screen: str,
+    *,
+    serial: str = ADB_SERIAL,
+    screen_probe: Callable[[], str | None],
+    max_steps: int = 8,
+    debug_capture_dir: str | Path | None = None,
+    debug_capture_prefix: str = "navigate",
+) -> dict[str, object]:
+    """Move through explicitly verified live transitions only.
+
+    The live task scripts need a shared entry point, but a missing route must
+    never be filled with a guessed coordinate.  At present the only generic
+    transition owned by this module is the initial-character screen's map
+    button; the reverse path is handled by its dedicated live task.
+    """
+    if not target_screen or max_steps < 0:
+        raise ValueError("target_screen/max_stepsが不正です")
+    current = screen_probe()
+    trace: list[str | None] = [current]
+    if current == target_screen:
+        return {"status": "ready", "screen_id": current, "trace": trace, "steps": 0}
+    transitions: Mapping[tuple[str | None, str], tuple[str, str]] = {
+        ("initial_char", "boss_map"): ("マップ", "boss_map"),
+    }
+    for _ in range(max_steps):
+        transition = transitions.get((current, target_screen))
+        if transition is None:
+            return {
+                "status": "safety_stop",
+                "reason": "unconfirmed_transition",
+                "screen_id": current,
+                "target_screen": target_screen,
+                "trace": trace,
+            }
+        label, expected = transition
+        coordinates = {label: ADB_BUTTON_COORDINATES[label]}
+        adapter = AdbScreenAdapter(
+            coordinates=coordinates,
+            serial=serial,
+            task_name=debug_capture_prefix,
+            screen_guard=lambda _label, expected_screen=current: screen_probe() == expected_screen,
+            screen_probe=screen_probe,
+            adb_healthcheck=True,
+            debug_capture_dir=debug_capture_dir,
+            require_screen_change=True,
+        )
+        adapter.click(label)
+        current = screen_probe()
+        trace.append(current)
+        if current == expected == target_screen:
+            return {"status": "ready", "screen_id": current, "trace": trace, "steps": len(trace) - 1}
+        return {
+            "status": "safety_stop",
+            "reason": "unexpected_transition",
+            "screen_id": current,
+            "target_screen": target_screen,
+            "trace": trace,
+        }
+    return {"status": "safety_stop", "reason": "max_steps_exceeded", "screen_id": current, "target_screen": target_screen, "trace": trace}
 
 
 def restart_adb_connection(
@@ -351,7 +403,7 @@ def run_adb_swipe(
 
 
 def scan_map_layout(
-    adapter: "ScreenAdapter",
+    adapter: ScreenAdapter,
     *,
     observe_layout: Callable[[], object | None],
     at_right_edge: Callable[[object | None], bool],
@@ -396,6 +448,7 @@ MAX_DEBUG_CAPTURE_PAIRS = 100
 def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, serial: str = ADB_SERIAL) -> Path:
     """タップ直前画面に予定座標を描画して保存する検証用処理。"""
     from PIL import Image, ImageDraw
+
     from vision.capture import AdbScreenCapture
 
     destination = Path(output_dir)
@@ -703,9 +756,12 @@ def confirm_boss_names(
     ):
         if not isinstance(adapter, AdbScreenAdapter) and not adapter.is_visible(open_label):
             return f"安全停止: {open_label}が表示されていません"
-        if isinstance(adapter, AdbScreenAdapter) and adapter.visibility_probe is not None:
-            if not adapter.wait_until_visible(open_label, timeout_seconds=2):
-                return f"安全停止: {open_label}の表示復帰を確認できません"
+        if (
+            isinstance(adapter, AdbScreenAdapter)
+            and adapter.visibility_probe is not None
+            and not adapter.wait_until_visible(open_label, timeout_seconds=2)
+        ):
+            return f"安全停止: {open_label}の表示復帰を確認できません"
         click_and_wait(adapter, open_label)
         name = read_boss_name(side)
         if not isinstance(name, str) or not name.strip():
@@ -716,9 +772,8 @@ def confirm_boss_names(
         click_and_wait(adapter, close_label)
         # 左詳細を閉じた直後は復帰アニメーション中のことがある。
         # マップ画面への復帰を確認できるまで、右ボスへのタップを許可しない。
-        if side == "left" and wait_for_map_return is not None:
-            if not wait_for_map_return():
-                return "安全停止: 左ボス詳細を閉じた後、マップ復帰を確認できません"
+        if side == "left" and wait_for_map_return is not None and not wait_for_map_return():
+            return "安全停止: 左ボス詳細を閉じた後、マップ復帰を確認できません"
     return names
 
 

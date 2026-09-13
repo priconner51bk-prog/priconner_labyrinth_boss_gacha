@@ -42,21 +42,7 @@ class AdbTemplateScreenProbe:
         "labyrinth_top": {"出発", "挑戦中"}, "quest_menu": {"ラビリンス"},
         "guild_select": {"フォレスティエ", "美食殿"}, "guild_confirm": {"ギルド選択確認", "ギルド選択キャンセル"}, "bonus": {"閉じる", "出発ボーナス閉じる"},
         "boss_detail": {"閉じる"}, "character_join": {"閉じる", "キャラ加入閉じる"},
-        "move_confirm": {"移動先確認OK"},
-        "event_confirm": {"イベント移動OK"},
-        "event_battle_choice": {"イベント通常選択"},
         "item_reward": {"アイテム報酬閉じる", "閉じる", "出発ボーナス閉じる"},
-        "relic_choice": {"遺物選択"},
-        "shop_purchase_confirm": {"購入確認OK"},
-        "shop_purchase_complete": {"購入完了OK"},
-        "shop_exit_confirm": {"ショップ終了OK"},
-        "shop": {"ショップ購入1", "ショップ購入2", "ショップ購入3", "ショップ閉じる"},
-        "battle_tile_normal": {"挑戦する"},
-        "battle_party": {"バトル開始"},
-        "battle_party_ready": {"EX装備"}, "battle_victory": {"勝利次へ"}, "battle_reward": {"報酬次へ"},
-        "character_bonus": {"キャラボーナス選択"},
-        "ex_equipment": {"おまかせ装備"}, "ex_auto_dialog": {"EX自動設定OK"},
-        "ex_equipment_conflict": {"EX装備競合警告", "EX競合キャンセル"},
         "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する"},
         "withdraw_confirm": {"撤退確認OK", "撤退確認キャンセル"},
     }
@@ -103,9 +89,6 @@ class AdbTemplateScreenProbe:
     def _classify(self, image) -> str | None:
         # Conflict warning is a safety-critical override: it must win over
         # the visually similar base EX-equipment screen.
-        conflict = self.screens.get("ex_equipment_conflict")
-        if conflict is not None and self._score(image, conflict, conflict) >= self.threshold:
-            return "ex_equipment_conflict"
         # 画面固有ボタンの存在は、動的なキャラクター画像より強い識別子。
         # 優先順位は遷移の入口から出口へ固定する。
         # ボス詳細は「閉じる」ボタンが報酬ダイアログと共通のため、先に
@@ -117,7 +100,7 @@ class AdbTemplateScreenProbe:
         # dynamic button templates (a card can contain a visually identical
         # button ROI).
         for screen_id, reference in self.screens.items():
-            if screen_id in {"ex_equipment_conflict", "boss_detail"}:
+            if screen_id in {"boss_detail"}:
                 continue
             if self._score(image, reference, reference) >= self.threshold:
                 return screen_id
@@ -131,26 +114,8 @@ class AdbTemplateScreenProbe:
                                  ("item_reward", "アイテム報酬閉じる"),
                                  # 終了確認は移動確認と背景が似るため先に判定する。
                                  ("withdraw_confirm", "撤退確認OK"),
-                                 ("move_confirm", "移動先確認OK"),
-                                 ("event_confirm", "イベント移動OK"),
-                                 ("event_battle_choice", "イベント通常選択"),
                                  ("boss_detail", "閉じる"),
                                  ("item_reward", "アイテム報酬閉じる"),
-                                 ("relic_choice", "遺物選択"),
-                                 ("shop_purchase_confirm", "購入確認OK"),
-                                 ("shop_purchase_complete", "購入完了OK"),
-                                 ("shop_exit_confirm", "ショップ終了OK"),
-                                 ("shop", "ショップ購入1"),
-                                 ("battle_tile_normal", "挑戦する"),
-                                 ("battle_party", "バトル開始"),
-                                 ("battle_party_ready", "EX装備"),
-                                 ("ex_equipment", "おまかせ装備"),
-                                 ("ex_auto_dialog", "EX自動設定OK"),
-                                 ("ex_equipment_conflict", "EX装備競合警告"),
-                                 ("ex_equipment_conflict", "EX競合キャンセル"),
-                                 ("battle_victory", "勝利次へ"),
-                                 ("battle_reward", "報酬次へ"),
-                                 ("character_bonus", "キャラボーナス選択"),
                                  ("guild_confirm", "ギルド選択確認"),
                                  ("initial_char", "マップ")):
             # 「閉じる」は複数のダイアログで共通するため、ボタンROI
