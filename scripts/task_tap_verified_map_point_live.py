@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
-import time
-import hashlib
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -17,7 +16,6 @@ sys.path.insert(0, str(ROOT))
 from decision.timing import AdaptiveWaitPolicy
 from scripts.labyrinth_route import run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
-from vision.template_screen_probe import load_template_probe_config
 
 
 def detected_screen(serial: str) -> str | None:
@@ -39,7 +37,6 @@ def main() -> int:
     parser.add_argument("--serial", default="127.0.0.1:5555")
     args = parser.parse_args()
     capture = AdbScreenCapture(serial=args.serial)
-    probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
     screen = detected_screen(args.serial)
     if screen != "boss_map":
         print(json.dumps({"status": "safety_stop", "reason": "map_not_confirmed", "screen": screen}, ensure_ascii=False))
@@ -54,7 +51,7 @@ def main() -> int:
             # The move-confirm dialog is sometimes classified as boss_map by
             # the legacy template probe.  Use the captured image token for the
             # transition guard; the follow-up confirmation task performs the
-            # screen-specific OCR check.
+            # screen-specific template check.
             screen_probe=lambda: (capture.capture(frame), hashlib.sha1(frame.read_bytes()).hexdigest())[1],
             previous_screen_token=previous_token,
             require_screen_change=True, debug_capture_dir=frame.parent,

@@ -25,7 +25,7 @@ def _tap(probe, point, previous: str, prefix: str, serial: str) -> str:
         # EX装備画面はアニメーションが短く、長いタイムアウトは
         # 空振り時に不要な待ち時間になる。画面プローブがnoticeへ
         # 誤分類する端末差があるため、ここでは固定座標入力後の
-        # 目的画面OCR／後段ガードで確認する。
+        # 目的画面のテンプレート／後段ガードで確認する。
         timing_policy=AdaptiveWaitPolicy(minimum_seconds=0.03, poll_seconds=0.03, timeout_seconds=0.8),
         screen_probe=probe.observe_screen, require_screen_change=False,
         previous_screen_token=previous, debug_capture_dir=ROOT / "data/observations/live",
@@ -47,7 +47,7 @@ def _checkbox_checked(capture: AdbScreenCapture) -> bool:
 
 
 def _battle_party_by_layout(capture: AdbScreenCapture) -> bool:
-    """Fallback for stylized/garbled OCR on the party screen."""
+    """Verify the party layout when the screen probe is uncertain."""
     frame = ROOT / "data/observations/live/task_battle_party_layout_ex.png"
     capture.capture(frame)
     image = cv2.imread(str(frame), cv2.IMREAD_COLOR)
