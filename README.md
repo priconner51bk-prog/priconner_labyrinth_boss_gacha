@@ -57,6 +57,8 @@ python -m pytest -q
 
 実機を操作しない判定デバッグは[自動テスト](docs/AUTOMATED_TESTS.md)と[開発手順](docs/DEVELOPMENT.md)を参照してください。
 
+GitHubへのpushとPull Requestでは、`.github/workflows/ci.yml` によりcompile、テスト、ruff、画面カタログ、安全監査を自動実行します。
+
 GUIを使う場合は、プロジェクトルートで `python main.py` を実行します。ADB serialの初期値はCLIと同じ `127.0.0.1:5555` です。
 
 ## 安全・ライセンス
