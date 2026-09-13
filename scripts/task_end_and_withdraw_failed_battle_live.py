@@ -11,6 +11,7 @@ sys.path.insert(0,str(ROOT/"src")); sys.path.insert(0,str(ROOT))
 
 from vision.capture import AdbScreenCapture
 
+
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--serial",default="127.0.0.1:5555"); a=p.parse_args(); cap=AdbScreenCapture(serial=a.serial)
     before=ROOT/"data/observations/live/task_end_withdraw_before.png"
