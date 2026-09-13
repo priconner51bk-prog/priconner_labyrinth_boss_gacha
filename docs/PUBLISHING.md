@@ -4,7 +4,7 @@
 
 ## 公開前確認
 
-配布ZIPを作成する場合は、`distribution/MANIFEST.md` を配布境界とし、生成物を `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260913_v6.zip` に保存します。ZIPには実機キャプチャ、ログ、OCR結果、レポート、モデル、ローカル設定を含めません。設定が参照するテンプレートをすべて含み、不要なテンプレートを含めないことを確認してから使用します。旧v3/v4/v5 ZIPはテンプレート不足のため配布禁止です。
+配布ZIPを作成する場合は、`distribution/MANIFEST.md` を配布境界とし、生成物を `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260913_v7.zip` に保存します。ZIPには実機キャプチャ、ログ、OCR結果、レポート、モデル、ローカル設定を含めません。設定が参照するテンプレートをすべて含み、不要なテンプレートを含めないことを確認してから使用します。旧v3/v4/v5/v6 ZIPはテンプレート不足のため配布禁止です。
 
 ```powershell
 git status --short
