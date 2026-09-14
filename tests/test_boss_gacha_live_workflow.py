@@ -53,6 +53,17 @@ def test_workflow_stops_when_ocr_is_missing():
         workflow.read_boss_names()
 
 
+def test_workflow_does_not_open_right_boss_after_left_mismatch():
+    events = []
+    workflow = LiveBossGachaWorkflow(
+        tap=lambda screen, label: events.append((screen, label)) or True,
+        wait_screen=lambda _screen: True,
+        read_boss_name=lambda _side: "対象外",
+    )
+    assert workflow.read_boss_names(target_left=("対象",)) == {"3": "対象外", "_early_reject": "true"}
+    assert not any(label == "右BOSS" for _, label in events)
+
+
 def test_workflow_builds_max_ten_runner():
     workflow = LiveBossGachaWorkflow(tap=lambda *_: True, wait_screen=lambda _: True, read_boss_name=lambda _: "対象外")
     runner = workflow.runner(

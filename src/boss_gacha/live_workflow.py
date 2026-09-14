@@ -76,7 +76,7 @@ class LiveBossGachaWorkflow:
             if next_screen == "item_reward":
                 self._tap_and_wait("item_reward", "閉じる", "initial_char")
 
-    def read_boss_names(self, start_screen: str = "initial_char", target_left: str | None = None) -> Mapping[str, str]:
+    def read_boss_names(self, start_screen: str = "initial_char", target_left: str | tuple[str, ...] | None = None) -> Mapping[str, str]:
         """マップを開き、左→閉じる→右→閉じるの順でテンプレート判定する。"""
         if start_screen == "initial_char":
             self._tap_and_wait("initial_char", "マップ", "boss_map")
@@ -90,7 +90,8 @@ class LiveBossGachaWorkflow:
         if not left:
             raise LiveSafetyStop("boss_name_missing:left")
         self._tap_and_wait("boss_detail", "閉じる", "boss_map")
-        if target_left is not None and left != target_left:
+        allowed_left = (target_left,) if isinstance(target_left, str) else target_left
+        if allowed_left is not None and left not in allowed_left:
             # 左ボスだけで対象外と確定した場合は、右ボスを開かずに
             # runnerへ早期撤退を通知する。
             return {"3": left, "_early_reject": "true"}

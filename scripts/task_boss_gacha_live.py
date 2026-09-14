@@ -664,11 +664,10 @@ def main() -> int:
     # begin_attempt完了後は必ず初期キャラ画面。既にマップ上で開始した場合だけ
     # 初回のマップ操作を省略する。
     read_start = {"screen": "boss_detail" if start_screen == "boss_detail" else ("boss_map" if start_screen == "boss_map" else "initial_char")}
-    # CLIではエリア3候補を複数指定できるため、左ボスだけで早期撤退
-    # するとエリア5候補を確認できない。左右を読み切ってから、許容・
-    # 対象の判定をBossGachaControllerへ委譲する。
+    # 左ボスが許容候補外なら、右ボスを開かずに早期撤退する。
+    # エリア3候補を複数指定した場合も、候補内なら右ボスを確認する。
     runner.read_boss_names = lambda: workflow.read_boss_names(
-        read_start.pop("screen", "initial_char"), target_left=None
+        read_start.pop("screen", "initial_char"), target_left=tuple(args.area3_boss)
     )
     result = runner.run()
     # Keep the CLI contract one JSON object per line; callers use the final
