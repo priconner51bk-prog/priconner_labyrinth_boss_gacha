@@ -2,7 +2,7 @@
 
 ## 実行前チェック
 
-1. `priconner_labyrinth_boss_gacha` を clone し、プロジェクトルートから実行します。
+1. ZIPを展開したプロジェクトルートから実行します。対応環境はWindowsのみです。
 2. ADB Platform-Tools が PATH にあり、`adb version` が成功することを確認します。
 3. エミュレーターが起動し、ADB 接続できることを確認します。
 4. `configs/` の対象ボス、ギルド、画面テンプレートが実行環境に合っていることを確認します。現在使用中のBlueStacks設定を維持する場合、既存テンプレートをそのまま使います。
@@ -23,7 +23,7 @@ python scripts/check_live_environment.py --serial 127.0.0.1:5555
 
 JSON の `ok` が `true` になるまで `--execute` は付けません。
 
-Windows、macOS、Linux のいずれでも ADB コマンドは同じです。BlueStacks の ADB ポートが既定値と異なる場合は、`adb connect <host>:<port>` と実行し、以後のコマンドおよび `main.py live` に同じ接続先を指定します。
+BlueStacks の ADB ポートが既定値と異なる場合は、`adb connect <host>:<port>` と実行し、以後のコマンドおよび `main.py live` に同じ接続先を指定します。
 
 ```bash
 adb -s 127.0.0.1:5555 get-state
@@ -45,7 +45,7 @@ python main.py live --serial 127.0.0.1:5555
 
 ## 実行
 
-許容するボスはエリアごとに 1 つ以上指定します。`--passports N` はボスガチャ処理の最大試行回数を指定する互換引数で、既定値は1000回です。ボスガチャは撤退運用のため、パスポートは消費しません。試験時は `--passports 1` を指定します。結果は成功（`matched`）、失敗（`max_attempts`）、停止（`safety_stop`）に分かれます。
+許容するボスはエリアごとに 1 つ以上指定します。GUIでは対象ボスと試行回数を画面上で設定できます。試行回数は、確認時は1回、本番時は必要な回数に設定してください。CLIでは `--passports N` が同じ設定に相当します。これはパスポート消費数ではなく最大試行回数です。結果は成功（`matched`）、失敗（`max_attempts`）、停止（`safety_stop`）に分かれます。
 
 既定の対象はエリア3の `ベノムサラマンドラ` とエリア5の `ゴブリンロード` です。各エリアには他の候補もあるため、候補一覧は `configs/boss_area3.json` と `configs/boss_area5.json` を確認してください。複数候補を許容する場合は、同じオプションを繰り返します。
 
@@ -58,7 +58,7 @@ python main.py live `
   --area5-boss "ゴブリンロード"
 ```
 
-GUIでは難易度と認識モデルを選択せず、現在対応している難易度10とテンプレート判定を固定使用します。
+GUIでは難易度と認識モデルを選択せず、現在対応している難易度10とテンプレート判定を固定使用します。GUIの「試行回数」に確認時は `1`、本番時は必要な値を入力します。
 
 GUIを使う場合は、プロジェクトルートで次を実行します。
 
@@ -90,5 +90,5 @@ ADB、画面観測、許容ボス、テンプレート、画面遷移、対象�
 ## OS ごとの注意
 
 - Windows は BlueStacks と ADB の組み合わせを主な検証対象とします。
-- macOS / Linux は ADB クライアントの動作を確認できますが、BlueStacks 本体の提供状況と画面キャプチャ方式は環境ごとに異なります。
+- 対応OSはWindowsのみです。macOS / Linuxや他のAndroidエミュレーターでは動作保証しません。
 - OS が変わる場合は、ADB 接続だけでなく画面サイズ、DPI、テンプレート、キャプチャ結果を preflight で再確認します。

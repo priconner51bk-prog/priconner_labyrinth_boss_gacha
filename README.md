@@ -2,29 +2,28 @@
 
 『プリコネ』ラビリンスのボスガチャ処理を、画面認識と安全停止付きで管理・実行するプロジェクトです。
 
+## 対応OS
+
+Windows専用です。BlueStacks 5、PowerShell、Windows版Python、Windows用Android SDK Platform-Tools（ADB）を前提にしています。macOS、Linux、他のAndroidエミュレーターは対応・検証していません。
+
 ## まず読む
 
-1. [セットアップとBlueStacks設定](docs/SETUP.md)
+1. [ZIPからのセットアップとBlueStacks設定](docs/SETUP.md)
 2. [実機運用手順](docs/OPERATIONS.md)
 3. [設定と対応範囲](docs/CONFIGURATION.md)
 4. [ドキュメント一覧](docs/INDEX.md)
 
-最初は必ず `--execute` なしでpreflightを実行し、ラビリンス入口画面を認識できることを確認してください。
+初回はGUIを起動し、ラビリンス入口画面を認識できることを確認してください。GUIの「試行回数」欄で、確認時は `1`、本番時は必要な回数を設定できます。
+
+配布ZIPを使う場合は、`priconner_labyrinth_boss_gacha.zip` を展開し、展開先をPowerShellの作業フォルダーにしてから[セットアップ手順](docs/SETUP.md)を実行してください。
+
+GUIの起動:
 
 ```powershell
-python main.py live --serial 127.0.0.1:5555
+python main.py
 ```
 
-確認後の実行例:
-
-```powershell
-python main.py live --execute --passports 1 `
-  --serial 127.0.0.1:5555 `
-  --area3-boss "ベノムサラマンドラ" `
-  --area5-boss "ゴブリンロード"
-```
-
-`--passports` は互換引数で、パスポート消費数ではなく最大試行回数を指定します。ボスガチャは撤退運用のため、パスポートは消費しません。
+CLIで実行する場合は `--passports N` で最大試行回数を指定できます。これはパスポート消費数ではありません。ボスガチャは撤退運用のため、パスポートは消費しません。
 
 ## 対応範囲
 
