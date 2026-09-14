@@ -1,6 +1,13 @@
+import subprocess
 from unittest.mock import patch
 
-from scripts.live_cli_utils import advance_error_to_title, advance_startup_screen, relaunch_game_from_title
+import pytest
+
+from scripts.live_cli_utils import (
+    advance_error_to_title,
+    advance_startup_screen,
+    relaunch_game_from_title,
+)
 
 
 def test_relaunch_game_from_title_taps_touch_to_start_position():
@@ -15,6 +22,20 @@ def test_relaunch_game_from_title_taps_touch_to_start_position():
 
     assert result["ok"] is True
     assert calls[-1][-2:] == ["640", "670"]
+
+
+def test_relaunch_game_from_title_returns_safe_failure_on_adb_error():
+    error = subprocess.CalledProcessError(1, ["adb", "shell"])
+    with patch("scripts.live_cli_utils.subprocess.run", side_effect=error):
+        result = relaunch_game_from_title("emulator-5554")
+
+    assert result["ok"] is False
+    assert result["stage"] == "title_tap"
+
+
+def test_relaunch_game_from_title_does_not_hide_unexpected_errors():
+    with patch("scripts.live_cli_utils.subprocess.run", side_effect=RuntimeError("unexpected")), pytest.raises(RuntimeError, match="unexpected"):
+        relaunch_game_from_title("emulator-5554")
 
 
 def test_startup_waits_then_taps_title_once_and_accepts_known_screen():

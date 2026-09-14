@@ -6,8 +6,6 @@ import subprocess
 from datetime import datetime, timezone
 from typing import Any
 
-
-
 PACKAGE_NAMES = ("opencv-python", "pydantic", "mss", "pytest", "torch")
 
 

@@ -7,9 +7,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
+from live_cli_utils import screen_error_message
+
 from vision.capture import AdbScreenCapture
 from vision.template_screen_probe import load_template_probe_config
-from live_cli_utils import screen_error_message
 
 
 def main() -> int:

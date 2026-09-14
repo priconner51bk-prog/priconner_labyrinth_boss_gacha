@@ -1,15 +1,13 @@
 """実機ガチャで再発した選択・画面分類を固定データで検証する。"""
 
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from boss_gacha import BossGachaController, BossGachaPolicy
 from boss_gacha.guild_selection import scan_directions
-from vision.template_screen_probe import load_template_probe_config
 
 
 def test_target_pair_is_match_and_other_pair_is_retry():

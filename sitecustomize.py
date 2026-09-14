@@ -9,8 +9,8 @@ Existing valid environment overrides are preserved.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def _set_runtime_path(variable: str, directory: Path, marker: str) -> None:

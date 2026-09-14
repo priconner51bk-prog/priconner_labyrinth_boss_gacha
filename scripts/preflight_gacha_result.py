@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from diagnostics.safety_stop_analysis import analyze_safety_stop
-
 
 KNOWN_SCREENS = {
     "title", "startup_splash", "notice", "startup_error", "quest_menu",

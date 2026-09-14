@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import time
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
 
 
 def screen_error_message(exc: BaseException, serial: str) -> str:
@@ -24,7 +24,7 @@ def relaunch_game_from_title(serial: str) -> dict[str, object]:
             ["adb", "-s", serial, "shell", "input", "tap", "640", "670"],
             check=True, capture_output=True, text=True, timeout=5,
         )
-    except Exception as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         return {"ok": False, "stage": "title_tap", "error": screen_error_message(exc, serial)}
     return {"ok": True, "stage": "title_tap"}
 

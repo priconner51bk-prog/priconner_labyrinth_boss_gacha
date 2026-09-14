@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-
+from typing import Any
 
 HARD_MAX_ATTEMPTS = 1000
 
@@ -28,7 +28,7 @@ class BossGachaPolicy:
             raise ValueError("allowed_bosses must not be empty")
 
     @classmethod
-    def from_json(cls, path: str | Path) -> "BossGachaPolicy":
+    def from_json(cls, path: str | Path) -> BossGachaPolicy:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         allowed = data.get("allowed_bosses")
         return cls(

@@ -6,7 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 TASKS = {"L1c-1", "L1c-2", "L1c-3", "L1c-4"}
 REQUIRED = {"task_id", "run_id", "screen_sequence", "result", "input_count", "screenshots"}
 

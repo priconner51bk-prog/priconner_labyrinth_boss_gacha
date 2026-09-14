@@ -6,7 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 EXPECTED_COUNTS = {"H1b-2": 4, "H1b-3": 4, "H1b-4": 3, "H1b-5": 3}
 RESULTS = {"success", "safety_stop", "input_missing"}
 REQUIRED_FIELDS = {

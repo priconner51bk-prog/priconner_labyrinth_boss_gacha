@@ -6,12 +6,12 @@ import argparse
 import importlib
 import json
 import os
-from pathlib import Path
 import queue
 import subprocess
 import sys
 import threading
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox, ttk
 
 ROOT = Path(__file__).resolve().parent
@@ -180,14 +180,14 @@ class BossGachaWindow:
                 commands = (["adb", "kill-server"], ["adb", "start-server"], ["adb", "devices"])
                 outputs: list[str] = []
                 for command in commands:
-                    result = subprocess.run(command, capture_output=True, text=True,
+                    result = subprocess.run(command, check=False, capture_output=True, text=True,
                                             encoding="utf-8", errors="replace", timeout=15)
                     outputs.append(f"$ {' '.join(command)}\n{result.stdout}{result.stderr}".strip())
                     if result.returncode != 0:
                         raise RuntimeError(f"ADB command failed: {' '.join(command)}")
                 self.output_queue.put("[ADB再起動完了]\n" + "\n".join(outputs))
                 self.output_queue.put(f"[ADB対象] {serial or '(未指定)'}")
-            except Exception as exc:
+            except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError) as exc:
                 self.output_queue.put(f"[ADB再起動失敗] {type(exc).__name__}: {exc}")
             finally:
                 self.root.after(0, lambda: self.adb_button.configure(state="normal"))
@@ -202,7 +202,7 @@ class BossGachaWindow:
 
         def worker() -> None:
             try:
-                result = subprocess.run(["adb", "devices"], capture_output=True, text=True,
+                result = subprocess.run(["adb", "devices"], check=False, capture_output=True, text=True,
                                         encoding="utf-8", errors="replace", timeout=10)
                 devices = []
                 for line in result.stdout.splitlines():
@@ -216,7 +216,7 @@ class BossGachaWindow:
                     message = f"[ADB未接続] {serial or '(未指定)'}\n接続端末: {', '.join(devices) or 'なし'}"
                     status = "ADB未接続"
                 self.output_queue.put(message)
-            except Exception as exc:
+            except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
                 self.output_queue.put(f"[ADB確認失敗] {type(exc).__name__}: {exc}")
                 status = "ADB確認失敗"
             self.root.after(0, lambda: self.status.configure(text=status))

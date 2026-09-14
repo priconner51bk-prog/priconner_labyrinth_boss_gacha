@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # These values describe instantaneous load, not environment configuration.
 # Comparing them makes repeated collection reports noisy by design.
 VOLATILE_KEYS = {

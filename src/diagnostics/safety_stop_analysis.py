@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 _KNOWN = {
     "guild_mismatch": {
         "cause": "選択したギルドと画面上のギルドが一致しない。",

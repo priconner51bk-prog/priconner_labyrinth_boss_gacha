@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 REQUIRED_MANIFEST = {"run_id", "task_id", "result_count", "failure_count", "artifact_paths", "redaction_check"}
 REQUIRED_RESULT = {"run_id", "task_id", "result"}
 
@@ -22,6 +21,8 @@ def validate(manifest_path: Path, results_path: Path) -> dict:
             raise ValueError(f"results:{index} missing fields: {', '.join(missing)}")
         if row["run_id"] != manifest["run_id"]:
             raise ValueError(f"results:{index} run_id mismatch")
+        if row["task_id"] != manifest["task_id"]:
+            raise ValueError(f"results:{index} task_id mismatch")
     failures = sum(row["result"] != "success" for row in rows)
     if int(manifest["result_count"]) != len(rows) or int(manifest["failure_count"]) != failures:
         raise ValueError("manifest counts do not match results")

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import time
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from .controller import BossGachaController
+
+logger = logging.getLogger(__name__)
 
 
 class LiveSafetyStop(RuntimeError):
@@ -95,8 +99,8 @@ class BossGachaRunner:
         payload.update(extra)
         try:
             self.on_progress(payload)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("progress callback failed: %s", type(exc).__name__)
 
     def _run_loop(self, phase_samples, measure):
         while self.controller.attempts < self.controller.policy.max_attempts:
@@ -129,7 +133,7 @@ class BossGachaRunner:
                             "attempt": self.controller.attempts,
                             "timing_summary": {key: self._summary(value) for key, value in phase_samples.items()}}
                 continue
-            result = measure("evaluate", lambda: self.controller.evaluate(names))
+            result = measure("evaluate", lambda names=names: self.controller.evaluate(names))
             # 判定根拠を保持し、OCR誤読時に撤退理由を後から監査できるようにする。
             result["boss_names"] = dict(names)
             result["timing_summary"] = {key: self._summary(value) for key, value in phase_samples.items()}

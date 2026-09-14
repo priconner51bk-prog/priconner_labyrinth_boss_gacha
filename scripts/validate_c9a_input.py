@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-
 REQUIRED = {
     "task_id", "run_id", "capture_time", "screen_sequence", "wait_seconds",
     "timeout_seconds", "title_tap_count", "screen_after", "result",
@@ -57,7 +56,7 @@ def validate(path: Path, require_files: bool = False) -> dict:
     if row["timeout_seconds"] <= 0 or row["wait_seconds"] > row["timeout_seconds"]:
         raise ValueError("wait_seconds must not exceed a positive timeout_seconds")
     if not isinstance(row["title_tap_count"], int) or isinstance(row["title_tap_count"], bool):
-        raise ValueError("title_tap_count must be an integer")
+        raise TypeError("title_tap_count must be an integer")
 
     screenshots = row["screenshots"]
     if not isinstance(screenshots, list) or len(screenshots) < 2 or any(not isinstance(v, str) or not v.strip() for v in screenshots):

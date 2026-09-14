@@ -5,16 +5,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from decision.timing import AdaptiveWaitPolicy
-from scripts.labyrinth_route import run_adb_coordinate_sequence, navigate_to_screen
+from scripts.labyrinth_route import navigate_to_screen, run_adb_coordinate_sequence
 from vision.capture import AdbScreenCapture
 from vision.template_screen_probe import load_template_probe_config
 

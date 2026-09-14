@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
-
 
 REQUIRED_FIELDS = {
     "images": {"image_id", "screen_id", "resolution", "source_path", "visible_roi"},

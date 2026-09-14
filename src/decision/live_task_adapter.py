@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from pathlib import Path
+from typing import Any
 
 from .labyrinth_orchestrator import TaskResult, TaskStatus
 
@@ -109,10 +110,10 @@ def execute_live_script(
             cwd=str(ROOT),
             capture_output=True,
             text=True,
-            check=False,
             encoding="utf-8",
             errors="replace",
             timeout=timeout_seconds,
+            check=False,
         )
     except subprocess.TimeoutExpired as exc:
         return LiveScriptRun(

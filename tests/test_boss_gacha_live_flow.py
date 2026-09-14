@@ -1,4 +1,4 @@
-from boss_gacha import GuardedLiveActions, BossGachaPhaseCoordinator
+from boss_gacha import BossGachaPhaseCoordinator, GuardedLiveActions
 from scripts.labyrinth_route import AdbScreenAdapter
 
 

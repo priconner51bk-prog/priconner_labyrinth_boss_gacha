@@ -5,8 +5,12 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 import pytest
 
-from boss_gacha import LiveBossGachaWorkflow, LiveSafetyStop
-from boss_gacha import BossGachaController, BossGachaPolicy
+from boss_gacha import (
+    BossGachaController,
+    BossGachaPolicy,
+    LiveBossGachaWorkflow,
+    LiveSafetyStop,
+)
 
 
 def test_workflow_reads_left_then_closes_then_right_then_closes():

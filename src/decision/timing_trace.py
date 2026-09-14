@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-import json
 from pathlib import Path
-import time
-from typing import Any, Iterator
+from typing import Any
 
 
 @dataclass(frozen=True)

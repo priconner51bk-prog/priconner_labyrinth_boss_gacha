@@ -21,12 +21,14 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - name: Install GUI test runtime
+        run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb
       - name: Install dependencies
         run: python -m pip install -r requirements.txt ruff
       - name: Compile Python sources
         run: python -m compileall -q scripts src
       - name: Run tests
-        run: python -m pytest -q --ignore=tests/test_main_gui.py
+        run: xvfb-run -a python -m pytest -q
       - name: Run static checks
         run: python -m ruff check scripts src --select F,E9,F63,F7,F82,PLW1510
       - name: Validate screen catalog

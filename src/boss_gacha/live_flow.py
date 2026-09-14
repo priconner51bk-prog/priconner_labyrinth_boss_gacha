@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from typing import ClassVar
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ class GuardedLiveActions:
 class BossGachaPhaseCoordinator:
     """ボスガチャ定型フェーズを画面ID・対象ラベルへ束縛する。"""
 
-    PHASES = {
+    PHASES: ClassVar[dict[str, tuple[str, str]]] = {
         "begin_attempt": ("labyrinth_top", "出発"),
         # 読み取りフェーズの入口は初期キャラ画面。ここからマップを開き、
         # 左→右の順でボス詳細を確認する。

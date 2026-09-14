@@ -1,8 +1,8 @@
 """ギルドカードのOCR行を位置情報で結合する純粋処理。座標は1280x720基準。"""
 
-from itertools import combinations
 import re
 import unicodedata
+from itertools import combinations, pairwise
 
 
 def scan_directions(guild_count: int, *, current_index: int = 0, target_index: int | None = None):
@@ -41,7 +41,7 @@ def guild_button_point(lines, wanted: str):
             centers = [row[2] for row in group]
             if max(centers) - min(centers) > 55:
                 continue
-            if any(a[1] > b[0] + 5 or b[0] - a[1] > 30 for a, b in zip(group, group[1:])):
+            if any(a[1] > b[0] + 5 or b[0] - a[1] > 30 for a, b in pairwise(group)):
                 continue
             if "".join(row[3] for row in group) != normalize(wanted):
                 continue

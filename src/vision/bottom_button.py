@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
-
+from collections.abc import Iterable
 
 # 1280x720のゲーム画面では、主要な確定・キャンセルボタンがこのY帯にある。
 BOTTOM_BUTTON_Y_RANGE = (560, 710)

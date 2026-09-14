@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def evaluate_retrieval(cases: list[dict[str, Any]], retrieve: Callable[[str, int], list[dict[str, Any]]], k: int = 5) -> dict[str, Any]:

@@ -6,7 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 ALLOWED_GROUPS = {"H-02", "H-03"}
 
 

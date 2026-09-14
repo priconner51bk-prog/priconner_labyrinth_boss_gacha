@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 FORBIDDEN_MODULES = frozenset({
     "pyautogui", "pydirectinput", "keyboard", "mouse", "win32api", "win32con",
     "openai", "anthropic", "requests", "httpx", "boto3",

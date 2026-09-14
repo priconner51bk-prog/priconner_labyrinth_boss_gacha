@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-
 REQUIRED = {
     "task_id", "run_id", "capture_time", "error_text", "screen_before",
     "title_button_bbox", "title_tap_count", "screen_after", "result",

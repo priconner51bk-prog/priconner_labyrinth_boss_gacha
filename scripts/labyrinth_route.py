@@ -11,7 +11,6 @@ import re
 import subprocess
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -20,12 +19,6 @@ from decision.timing import AdaptiveWaitPolicy, wait_until_hidden, wait_until_vi
 # 画面プローブを持たない互換アダプター向けの最小間隔。
 # 実機ADBは画面変化検知が優先されるため、ここで2秒を固定しない。
 SCRIPT_BUTTON_INTERVAL_SECONDS = 0.30
-# 旧ルート補助関数が受け付ける値と判定境界。
-THREE_CHOICE_ORDER = (3, 2, 1)
-HELL_TILE_AVOID_AREAS = frozenset({4, 5})
-HELL_TILE_RELIC_LEVEL_THRESHOLD = 15
-ROUTE_TILE_PRIORITY = ("Extreme", "通常", "遺物", "コネクトサイン", "ショップ", "イベント", "ボス", "HELL")
-
 # BlueStacksのADB画面はウィンドウ枠を含まない1280x720座標を使用する。
 ADB_SERIAL = "127.0.0.1:5555"
 ADB_HEALTHCHECK_TIMEOUT_SECONDS = 3
@@ -435,38 +428,6 @@ def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, s
     return overlay
 
 
-def validate_three_choice(choice: int) -> int:
-    """3択の指定番号をそのまま固定位置操作へ渡す。"""
-    if choice not in THREE_CHOICE_ORDER:
-        raise ValueError("3択は1、2、3のいずれかを指定してください")
-    return choice
-
-
-def fallback_route_choice(has_choices: bool) -> int | None:
-    """ルート候補がなければ既定の3番へ進む。"""
-    return None if has_choices else 3
-
-
-def should_avoid_hell_tile(area: int, relic_level_total: int) -> bool:
-    """エリア4・5では、遺物レベル合計15以上を前提にヘルマスを避ける。"""
-    if area < 0 or relic_level_total < 0:
-        raise ValueError("エリアと遺物レベル合計は0以上で指定してください")
-    return area in HELL_TILE_AVOID_AREAS and relic_level_total >= HELL_TILE_RELIC_LEVEL_THRESHOLD
-
-
-def prioritize_route_tiles(
-    tile_types: list[str], *, area: int, relic_level_total: int
-) -> list[str]:
-    """候補マスを優先順に並べる。エリア4・5はNORMALを最優先する。"""
-    if area < 0 or relic_level_total < 0:
-        raise ValueError("エリアと遺物レベル合計は0以上で指定してください")
-    order = {label: index for index, label in enumerate(ROUTE_TILE_PRIORITY)}
-    candidates = list(dict.fromkeys(tile_types))
-    if should_avoid_hell_tile(area, relic_level_total):
-        candidates = [tile for tile in candidates if tile != "HELL"]
-    return sorted(candidates, key=lambda tile: order.get(tile, len(order)))
-
-
 class ScreenAdapter(Protocol):
     def is_visible(self, label: str) -> bool: ...
     def click(self, label: str) -> None: ...
@@ -736,107 +697,12 @@ def open_map_and_confirm_boss_names(
     )
 
 
-@dataclass(frozen=True)
-class RouteStep:
-    label: str
-    user_check: bool = False
-
-
-# 遺物マスは移動・確認をスクリプトで処理し、候補比較だけユーザーへ返す。
-RELIC_TILE_STEPS = (
-    RouteStep("遺物マス"),
-    RouteStep("移動先確認"),
-    RouteStep("OK"),
-    RouteStep("遺物選択", user_check=True),
-)
-
-TILE_STEPS = {
-    "通常": (
-        RouteStep("通常マス"),
-        RouteStep("移動先確認"),
-        RouteStep("OK"),
-        RouteStep("挑戦する"),
-    ),
-    "EX": (
-        RouteStep("EXマス"),
-        RouteStep("移動先確認"),
-        RouteStep("OK"),
-        RouteStep("挑戦する"),
-    ),
-    "コネクトサイン": (
-        RouteStep("コネクトサインマス"),
-        RouteStep("移動先確認"),
-        RouteStep("OK"),
-    ),
-    "イベント": (
-        RouteStep("イベントマス"),
-        RouteStep("移動先確認"),
-        RouteStep("OK"),
-        RouteStep("Extreme"),
-    ),
-    "ショップ": (
-        RouteStep("ショップマス"),
-        RouteStep("移動先確認"),
-        RouteStep("OK"),
-    ),
-    "ボス": (
-        RouteStep("ボスマス", user_check=True),
-        RouteStep("ボス確認", user_check=True),
-        RouteStep("移動先確認", user_check=True),
-        RouteStep("OK"),
-        RouteStep("挑戦する"),
-    ),
-}
-
-# 表記揺れを吸収し、Extreme到着時はEXマスと同じ自動フローで処理する。
-TILE_STEPS["Extreme"] = TILE_STEPS["EX"]
-
-
 # 「撤退する」は対象外ボス時の再抽選、および戦闘で勝利困難な場合の
 # 中断・やり直しに必要な正規フローとして許可。
 # 一方、ラビリンスを完全終了する帰還・終了操作は誤タップ防止のため常時禁止。
 FORBIDDEN = frozenset({
     "帰還する", "帰還する（報酬あり）", "終了する", "選択終了",
 })
-
-# 判断ロジックは画面認識側へ返し、ここでは安全な定型処理だけを担当する。
-RELIC_PRIORITY = ("加速", "会心", "弱体", "強化", "守備")
-
-
-def rank_relic(stars: int, effect: str, value: int = 0, current: int = 0) -> tuple[int, int, int, int]:
-    """遺物候補の比較キー。星数、効果優先、能力値、所持数の順。"""
-    try:
-        effect_rank = -RELIC_PRIORITY.index(effect)
-    except ValueError:
-        effect_rank = -len(RELIC_PRIORITY)
-    return (stars, effect_rank, value, -current)
-
-
-def choose_relic(candidates: list[dict]) -> int:
-    """確認済み候補から最良候補の添字を返す。"""
-    if not candidates:
-        raise ValueError("遺物候補がありません")
-    return max(
-        range(len(candidates)),
-        key=lambda i: rank_relic(
-            int(candidates[i].get("stars", 0)),
-            str(candidates[i].get("effect", "")),
-            int(candidates[i].get("value", 0)),
-            int(candidates[i].get("current", 0)),
-        ),
-    )
-
-
-def close_optional_dialogs(adapter: ScreenAdapter) -> str:
-    """任意ダイアログだけを素早く処理し、対象がなければ即終了する。"""
-    closed = False
-    while adapter.is_visible("閉じる"):
-        click_and_wait(adapter, "閉じる")
-        closed = True
-    if closed:
-        return "任意ダイアログを閉じました"
-    return "追加操作なし。次の処理へ"
-
 
 def close_departure_bonus(adapter: ScreenAdapter) -> str:
     """出発直後のボーナス窓を閉じる共通処理。
@@ -895,54 +761,6 @@ def inspect_game_window_title(
     else:
         result["screen_status"] = "known"
     return result
-
-
-def enter_relic_tile(
-    adapter: ScreenAdapter,
-    *,
-    relic_candidates: list[dict] | None = None,
-    auto_select: bool = False,
-) -> str:
-    """遺物マスへ移動し、設定済み候補があれば決定論的に選択する。"""
-    for step in RELIC_TILE_STEPS:
-        if step.label in FORBIDDEN:
-            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
-        if step.user_check:
-            if auto_select and step.label == "遺物選択":
-                break
-            return f"ユーザー確認待ち: {step.label}"
-        if not adapter.is_visible(step.label):
-            return f"画面確認待ち: {step.label}"
-        click_and_wait(adapter, step.label)
-    if auto_select:
-        if not relic_candidates:
-            return "ユーザー確認待ち: 遺物候補"
-        choice = choose_relic(relic_candidates) + 1
-        return select_candidate_and_close(adapter, choice)
-    return "ユーザー確認待ち: 遺物選択"
-
-
-def enter_tile(
-    adapter: ScreenAdapter,
-    tile_type: str,
-    *,
-    relic_candidates: list[dict] | None = None,
-    auto_select_relic: bool = False,
-) -> str:
-    """マス種別ごとの定型操作を即時実行する。未知のマスだけ停止する。"""
-    if tile_type == "遺物":
-        return enter_relic_tile(adapter, relic_candidates=relic_candidates, auto_select=auto_select_relic)
-    if tile_type not in TILE_STEPS:
-            return f"ユーザー確認待ち: 未知のマス種別 {tile_type}"
-    for step in TILE_STEPS[tile_type]:
-        if step.label in FORBIDDEN:
-            raise RuntimeError(f"禁止操作を拒否しました: {step.label}")
-        if step.user_check:
-            return f"ユーザー確認待ち: {step.label}"
-        if not adapter.is_visible(step.label):
-            return f"画面確認待ち: {step.label}"
-        click_and_wait(adapter, step.label)
-    return f"{tile_type}マス処理完了"
 
 
 if __name__ == "__main__":

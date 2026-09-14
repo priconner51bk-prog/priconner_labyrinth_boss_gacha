@@ -25,7 +25,7 @@ def export_approved_rule(candidate: dict[str, Any]) -> str:
         raise ValueError("approved rule must contain a non-empty rule object")
     conditions = candidate.get("applicable_conditions", {})
     if not isinstance(conditions, dict):
-        raise ValueError("approved rule applicable_conditions must be an object")
+        raise TypeError("approved rule applicable_conditions must be an object")
     payload = {"rule_id": rule_id, "rule": candidate["rule"], "confidence": confidence, "applicable_conditions": conditions}
     try:
         serialized = json.dumps(payload, ensure_ascii=False, indent=2)

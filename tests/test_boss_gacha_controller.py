@@ -1,5 +1,6 @@
-from boss_gacha import BossGachaController, BossGachaPolicy
 import pytest
+
+from boss_gacha import BossGachaController, BossGachaPolicy
 
 
 def test_policy_rejects_more_than_one_thousand_attempts():

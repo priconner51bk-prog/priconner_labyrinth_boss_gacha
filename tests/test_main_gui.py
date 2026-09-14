@@ -1,6 +1,5 @@
-from unittest.mock import patch
-
 import tkinter as tk
+from unittest.mock import patch
 
 from main import BossGachaWindow
 

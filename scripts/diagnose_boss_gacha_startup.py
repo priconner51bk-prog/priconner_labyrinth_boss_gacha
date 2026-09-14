@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import subprocess
-from typing import Callable
-
+from collections.abc import Callable
+from pathlib import Path
 
 DEFAULT_LAUNCHER = Path(r"C:\Program Files\BlueStacks_nxt\HD-Player.exe")
 DEFAULT_PACKAGE = "jp.co.cygames.princessconnectredive"

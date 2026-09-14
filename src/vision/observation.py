@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from contracts import GameState
-from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScreenObservation(BaseModel):

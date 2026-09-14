@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+
 from boss_gacha.guild_selection import guild_button_point, scan_directions
 
 

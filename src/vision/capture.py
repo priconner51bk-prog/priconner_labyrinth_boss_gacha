@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-import subprocess
-from typing import Callable
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from contracts import Correction, EducationEvent, EducationExtraction
 
 from .repository import SQLiteRepository
@@ -8,7 +10,11 @@ from .repository import SQLiteRepository
 class EducationMemoryAdapter:
     """Persist a validated education event into its dedicated memory class."""
 
-    _MEMORY_TYPES = {"teaching": "semantic", "correction": "correction", "rule_candidate": "rule"}
+    _MEMORY_TYPES: ClassVar[dict[str, str]] = {
+        "teaching": "semantic",
+        "correction": "correction",
+        "rule_candidate": "rule",
+    }
 
     def __init__(self, repository: SQLiteRepository):
         self.repository = repository
