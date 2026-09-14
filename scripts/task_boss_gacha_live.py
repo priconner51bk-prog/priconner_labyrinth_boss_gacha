@@ -354,7 +354,7 @@ def main() -> int:
                     # crop center.  Use the verified button center for that
                     # partial-card fixture while retaining the center rule
                     # for complete card fixtures.
-                    button_x = template.shape[1] - 50 if filename == "mercurius" else template.shape[1] // 2
+                    button_x = template.shape[1] - 50 if filename in {"mercurius", "lucent_academy"} else template.shape[1] // 2
                     return (x + button_x, y + template.shape[0] - 70)
                 return None
 
