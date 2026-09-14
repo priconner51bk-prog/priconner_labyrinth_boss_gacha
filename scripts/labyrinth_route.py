@@ -344,7 +344,8 @@ def run_adb_swipe(
             time.sleep(0.1 * (attempt + 1))
     if timing_trace is not None:
         timing_trace.record("adb_swipe_total", (time.monotonic() - started) * 1000,
-                            start=list(actual_start), end=list(actual_end), duration_ms=duration_ms)
+                            start=list(actual_start), end=list(actual_end),
+                            requested_duration_ms=duration_ms)
     if operation_logger is not None:
         record = getattr(operation_logger, "record", None)
         if callable(record):
