@@ -119,6 +119,9 @@ class BossGachaRunner:
                 # stream of early rejects could bypass the attempt limit and
                 # produce an incorrect terminal status.
                 self.controller.attempts += 1
+                self._progress(phase="ng", result="NG", attempt=self.controller.attempts,
+                               boss_names={key: value for key, value in names.items() if not str(key).startswith("_")},
+                               reason="left_boss_not_target")
                 early_result = {"status": "max_attempts", "attempt": self.controller.attempts,
                                 "mismatches": {"_early_reject": True}}
                 measure("withdraw", self.withdraw)
@@ -148,6 +151,9 @@ class BossGachaRunner:
                 return result
             if result["status"] == "safety_stop":
                 return result
+            self._progress(phase="ng", result="NG", attempt=self.controller.attempts,
+                           boss_names=dict(names), mismatches=result.get("mismatches", {}),
+                           reason="boss_not_target")
             self._progress(phase="retry", boss_names=dict(names))
             measure("withdraw", self.withdraw)
         return {"status": "max_attempts", "attempt": self.controller.attempts,

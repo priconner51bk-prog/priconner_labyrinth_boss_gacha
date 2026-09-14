@@ -288,9 +288,17 @@ def main() -> int:
     if screen_id == "labyrinth_top":
         try:
             if probe.target_visible("挑戦中"):
+                    print(
+                        "【安全停止】ラビリンスのトップ画面で『挑戦中』を確認しました。\n"
+                        "現在の挑戦が残っている可能性があるため、操作を停止します。\n"
+                        "再実行する前に、ゲーム画面で挑戦を終了または撤退してください。",
+                        flush=True,
+                    )
                     print(json.dumps({
                         "status": "safety_stop",
                         "reason": "challenge_active_screen_is_ambiguous",
+                        "message": "ラビリンスのトップ画面で『挑戦中』が確認されました。現在の挑戦が残っている可能性があるため、安全のため操作を停止しました。",
+                        "next_action": "ゲーム画面で現在の挑戦状態を確認し、挑戦を終了または撤退してから再実行してください。",
                         "screen_id": screen_id,
                     }, ensure_ascii=False))
                     return 2
