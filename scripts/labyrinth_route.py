@@ -413,9 +413,16 @@ def _capture_tap_debug(x: int, y: int, *, output_dir: str | Path, prefix: str, s
 
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    index = len(list(destination.glob(f"{prefix}_*_source.png"))) + 1
-    if index > MAX_DEBUG_CAPTURE_PAIRS:
-        raise RuntimeError(f"デバッグ証跡上限到達: {prefix}")
+    source_files = sorted(destination.glob(f"{prefix}_*_source.png"), key=lambda path: path.stat().st_mtime)
+    # 長時間実行では証跡が上限に達して本来の操作まで停止していた。
+    # 同じタスクの古いペアだけをローテーションし、直近の証跡を残す。
+    while len(source_files) >= MAX_DEBUG_CAPTURE_PAIRS:
+        oldest = source_files.pop(0)
+        overlay = oldest.with_name(oldest.name.removesuffix("_source.png") + ".png")
+        oldest.unlink(missing_ok=True)
+        overlay.unlink(missing_ok=True)
+    used_indices = [int(path.stem.rsplit("_", 1)[-1]) for path in source_files if path.stem.rsplit("_", 1)[-1].isdigit()]
+    index = max(used_indices, default=0) + 1
     source = destination / f"{prefix}_{index:04d}_source.png"
     overlay = destination / f"{prefix}_{index:04d}.png"
     AdbScreenCapture(serial=serial).capture(source)

@@ -16,6 +16,13 @@ ROOT = SUBPROJECT
 sys.path.insert(0, str(SUBPROJECT / "src"))
 sys.path.insert(0, str(SUBPROJECT))
 
+# Windows の既定コードページで日本語の JSON/エラーが文字化けしないよう、
+# この実行コマンドの標準入出力を UTF-8 に固定する。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from boss_gacha import (
     BossGachaController,
     BossGachaPhaseCoordinator,
