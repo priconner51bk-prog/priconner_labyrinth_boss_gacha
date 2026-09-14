@@ -349,7 +349,13 @@ def main() -> int:
                 _, score, _, location = cv2.minMaxLoc(result)
                 if score >= 0.82:
                     x, y = location
-                    return (x + template.shape[1] // 2, y + template.shape[0] - 70)
+                    # The Mercurius card fixture is intentionally cropped at
+                    # the carousel's right edge; its button is right of the
+                    # crop center.  Use the verified button center for that
+                    # partial-card fixture while retaining the center rule
+                    # for complete card fixtures.
+                    button_x = template.shape[1] - 50 if filename == "mercurius" else template.shape[1] // 2
+                    return (x + button_x, y + template.shape[0] - 70)
                 return None
 
             try:
