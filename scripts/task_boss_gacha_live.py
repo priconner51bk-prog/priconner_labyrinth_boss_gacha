@@ -308,9 +308,10 @@ def main() -> int:
     frame_index = {"value": 0}
 
     def wait_screen(expected: str) -> bool:
-        # 通常遷移は2秒で打ち切る。ただしギルド選択確認は実機で
-        # ダイアログ描画が遅れるケースがあるため、その遷移だけ5秒待つ。
-        timeout = 5.0 if expected == "guild_confirm" else 2.0
+        # 通常遷移は2秒で打ち切る。ただしギルド選択確認と、出発後の
+        # ワープ演出を伴うギルド一覧遷移は実機で描画が遅れるため、
+        # その遷移だけ8秒待つ。
+        timeout = 8.0 if expected in {"guild_confirm", "guild_select"} else 2.0
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             observed = observe_screen_stable()
