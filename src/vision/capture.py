@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -69,18 +70,33 @@ class AdbScreenCapture:
     def capture(self, output_path: str | Path) -> CapturedFrame:
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        started = __import__("time").perf_counter()
-        result = subprocess.run(
-            [self.adb_command, "-s", self.serial, "exec-out", "screencap", "-p"],
-            check=True, capture_output=True, timeout=self.timeout_seconds,
-        )
-        if self.timing_trace is not None:
-            self.timing_trace.record("adb_screencap", (__import__("time").perf_counter() - started) * 1000,
-                                     serial=self.serial, bytes=len(result.stdout))
-        if not result.stdout:
-            raise RuntimeError("ADB screencap returned an empty image")
-        path.write_bytes(result.stdout)
-        return CapturedFrame(str(path), 0, datetime.now(timezone.utc))
+        last_error = None
+        for attempt in range(3):
+            started = time.perf_counter()
+            try:
+                result = subprocess.run(
+                    [self.adb_command, "-s", self.serial, "exec-out", "screencap", "-p"],
+                    check=True, capture_output=True, timeout=self.timeout_seconds,
+                )
+                if not result.stdout:
+                    raise RuntimeError("ADB screencap returned an empty image")
+                if self.timing_trace is not None:
+                    self.timing_trace.record("adb_screencap", (time.perf_counter() - started) * 1000,
+                                             serial=self.serial, bytes=len(result.stdout), attempt=attempt + 1)
+                path.write_bytes(result.stdout)
+                return CapturedFrame(str(path), 0, datetime.now(timezone.utc))
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                last_error = exc
+                if attempt < 2:
+                    # ADBサーバーを再起動してから、同じキャプチャを再試行する。
+                    subprocess.run([self.adb_command, "kill-server"], check=False,
+                                   capture_output=True, timeout=self.timeout_seconds)
+                    subprocess.run([self.adb_command, "start-server"], check=False,
+                                   capture_output=True, timeout=self.timeout_seconds)
+                    subprocess.run([self.adb_command, "connect", self.serial], check=False,
+                                   capture_output=True, timeout=self.timeout_seconds)
+                    time.sleep(0.2)
+        raise RuntimeError(f"ADB screencap failed after 3 consecutive attempts: {self.serial}") from last_error
 
 
 class WindowsGraphicsCapture:

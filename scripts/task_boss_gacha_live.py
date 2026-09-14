@@ -309,15 +309,52 @@ def main() -> int:
 
     def wait_screen(expected: str) -> bool:
         # 通常遷移は2秒で打ち切る。ただしギルド選択確認と、出発後の
-        # ワープ演出を伴うギルド一覧遷移は実機で描画が遅れるため、
-        # その遷移だけ8秒待つ。
-        timeout = 8.0 if expected in {"guild_confirm", "guild_select"} else 2.0
+        # ギルド選択への遷移は通常の2秒待機。確認ダイアログだけは
+        # 実機で描画が遅れるため8秒待つ。
+        timeout = 8.0 if expected == "guild_confirm" else 2.0
+        if expected == "guild_select":
+            print(json.dumps({"gacha_progress": True, "phase": "wait_guild_select", "timeout_s": timeout}, ensure_ascii=False), flush=True)
         deadline = time.monotonic() + timeout
+        last_observed = None
+        last_observation_error = None
         while time.monotonic() < deadline:
-            observed = observe_screen_stable()
+            if expected == "guild_select":
+                # observe_screen_stable() は内部で最大7.5秒再試行するため、
+                # 外側の8秒遷移待ちと重なる。ギルド遷移中は1回の取得を
+                # 直接行い、ワープ演出中の状態もログへ出す。
+                try:
+                    observed = probe.observe_screen()
+                except Exception as exc:
+                    observed = None
+                    last_observation_error = {
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                    print(json.dumps({
+                        "gacha_progress": True,
+                        "phase": "guild_select_observation_error",
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }, ensure_ascii=False), flush=True)
+                    print(json.dumps({"gacha_progress": True, "phase": "guild_select_capture_failed_3_consecutive", "error_type": type(exc).__name__, "error": str(exc)}, ensure_ascii=False), flush=True)
+                    return False
+            else:
+                observed = observe_screen_stable()
+            if expected == "guild_select" and observed != last_observed:
+                print(json.dumps({"gacha_progress": True, "phase": "guild_select_observation", "observed": observed}, ensure_ascii=False), flush=True)
+                last_observed = observed
             if observed == expected or (expected == "bonus" and observed == "item_reward"):
+                if expected == "guild_select":
+                    print(json.dumps({"gacha_progress": True, "phase": "guild_select_confirmed"}, ensure_ascii=False), flush=True)
                 return True
             time.sleep(0.08)
+        if expected == "guild_select":
+            print(json.dumps({
+                "gacha_progress": True,
+                "phase": "guild_select_timeout",
+                "last_observed": last_observed,
+                "last_observation_error": last_observation_error,
+            }, ensure_ascii=False), flush=True)
         return False
 
     def tap(screen: str, label: str) -> bool:
@@ -501,6 +538,7 @@ def main() -> int:
         # 対象ROIが実際に現れるまで短時間だけ再確認し、空振りを入力しない。
         deadline = time.monotonic() + 8.0
         dynamic_point = None
+        guild_template_started = False
         # 「閉じる」は画面ごとに別のROIテンプレートを持つ。論理上の
         # ラベルは共通のまま、表示確認だけ画面固有の別名へ切り替える。
         probe_label = label
@@ -538,8 +576,12 @@ def main() -> int:
             if dynamic_point is not None:
                 break
             if screen == "guild_select" and label not in probe.targets:
+                if not guild_template_started:
+                    print(json.dumps({"gacha_progress": True, "phase": "guild_template_match_start", "guild": label}, ensure_ascii=False), flush=True)
+                    guild_template_started = True
                 dynamic_point = dynamic_guild_point()
                 if dynamic_point is not None:
+                    print(json.dumps({"gacha_progress": True, "phase": "guild_template_match_success", "guild": label, "point": list(dynamic_point)}, ensure_ascii=False), flush=True)
                     break
             time.sleep(0.08)
         else:
@@ -548,6 +590,8 @@ def main() -> int:
         if point is None:
             return False
         try:
+            if screen == "labyrinth_top" and label == "出発":
+                print(json.dumps({"gacha_progress": True, "phase": "depart_tap_start", "point": list(point)}, ensure_ascii=False), flush=True)
             started = time.perf_counter()
             run_adb_coordinate_sequence([point], serial=args.serial, healthcheck=True,
                                         timing_policy=AdaptiveWaitPolicy(minimum_seconds=0.05, poll_seconds=0.03, timeout_seconds=4.0), screen_probe=probe.observe_screen,
@@ -556,6 +600,8 @@ def main() -> int:
             operation_log.record(task="task_boss_gacha", purpose=label, screen_before=screen,
                                  action="ADB tap", coordinate=point, adb_serial=args.serial, outcome="sent",
                                  duration_ms=(time.perf_counter() - started) * 1000)
+            if screen == "labyrinth_top" and label == "出発":
+                print(json.dumps({"gacha_progress": True, "phase": "depart_tap_sent"}, ensure_ascii=False), flush=True)
             save_gacha_screenshot(f"after_{label}")
             if screen == "guild_select":
                 settings_path = ROOT / ".local_gui_settings.json"
@@ -590,15 +636,11 @@ def main() -> int:
         image = cv2.imread(str(path))
         if image is None:
             raise RuntimeError("ボス名画像を読み込めません")
-        # ボス名はOCRを使わず、収集済み肖像テンプレートだけで判定する。
-        portrait_dir = ROOT / "data" / "template_migration" / "templates" / "boss_portraits"
+        # ボス名は肖像ではなく、詳細画面上部の名称部分だけで判定する。
+        name_dir = ROOT / "data" / "template_migration" / "templates" / "boss_names"
         best_name, best_score = None, 0.0
-        search = image[145:285, 350:510]
-        for template_path in portrait_dir.glob("*.png"):
-            # OpenCVのWindows版は日本語ファイル名を直接開けないため、
-            # ASCII名へコピー済みのテンプレートだけを対象にする。
-            if not template_path.name.isascii():
-                continue
+        search = image[80:145, 350:950]
+        for template_path in name_dir.glob("*.png"):
             template = cv2.imread(str(template_path), cv2.IMREAD_COLOR)
             if template is None or search.shape[0] < template.shape[0] or search.shape[1] < template.shape[1]:
                 continue
@@ -613,14 +655,30 @@ def main() -> int:
             "dark_gargoyle": "ダークガーゴイル",
             "greater_golem": "グレーターゴーレム",
             "ultima_guardian": "アルティマガーディアン",
-            "ultima_guardian_jp": "アルティマガーディアン",
             "chimera": "キマイラ",
             "frost_hound": "フロストハウンド",
+            "wrath_dragon": "ラースドラゴン",
+            "jabberwock": "ジャバウォック",
         }
         if best_name in aliases and best_score >= 0.82:
             trace.record("template_boss_name", (time.perf_counter() - started) * 1000,
                          side=side, score=best_score, name=best_name)
-            return aliases[best_name]
+            detected_name = aliases[best_name]
+            print(json.dumps({
+                "gacha_progress": True,
+                "phase": "boss_name_detected",
+                "side": side,
+                "boss_name": detected_name,
+                "score": round(best_score, 4),
+            }, ensure_ascii=False), flush=True)
+            return detected_name
+        print(json.dumps({
+            "gacha_progress": True,
+            "phase": "boss_name_detection_failed",
+            "side": side,
+            "best_template": best_name,
+            "score": round(best_score, 4),
+        }, ensure_ascii=False), flush=True)
         raise RuntimeError(
             f"boss_name_template_unrecognized:{side}:best={best_name!r}:score={best_score:.3f}:image={path}"
         )
