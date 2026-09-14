@@ -42,7 +42,7 @@ def _card_center(image, template_path: Path) -> tuple[int, int] | None:
     _, score, _, point = cv2.minMaxLoc(result)
     if score < 0.72:
         return None
-    return (point[0] + template.shape[1] // 2, 150 + point[1] + template.shape[0] - 72)
+    return (point[0] + template.shape[1] // 2, 150 + point[1] + 150)
 
 
 def main():
@@ -58,7 +58,7 @@ def main():
     template_name = GUILD_TEMPLATES.get(wanted)
     if template_name is None:
         print(json.dumps({"status":"safety_stop","reason":"guild_template_not_registered","guild":wanted},ensure_ascii=False)); return 2
-    point = _card_center(image, ROOT / "data/template_migration/templates/guild_cards" / f"{template_name}.png")
+    point = _card_center(image, ROOT / "data/template_migration/templates/guild_names" / f"{template_name}.png")
     if point is None:
         print(json.dumps({"status":"safety_stop","reason":"guild_card_not_confirmed","guild":wanted},ensure_ascii=False)); return 2
     x, y = point

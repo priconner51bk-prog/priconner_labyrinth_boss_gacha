@@ -335,7 +335,9 @@ def main() -> int:
                 }
                 filename = template_names.get(label)
                 source_name = None
-                template_path = ROOT / "data" / "template_migration" / "templates" / "guild_cards" / (f"{filename}.png" if filename else "")
+                # ギルド名だけを照合する。難易度表示・キャラクター画像は
+                # 変更され得るため、カード全体をテンプレートにしない。
+                template_path = ROOT / "data" / "template_migration" / "templates" / "guild_names" / (f"{filename}.png" if filename else "")
                 template = cv2.imread(str(template_path), cv2.IMREAD_COLOR) if filename and template_path.exists() else None
                 if template is None and source_name:
                     source = cv2.imread(str(ROOT / "data" / "template_migration" / "source" / source_name), cv2.IMREAD_COLOR)
@@ -349,13 +351,9 @@ def main() -> int:
                 _, score, _, location = cv2.minMaxLoc(result)
                 if score >= 0.82:
                     x, y = location
-                    # The Mercurius card fixture is intentionally cropped at
-                    # the carousel's right edge; its button is right of the
-                    # crop center.  Use the verified button center for that
-                    # partial-card fixture while retaining the center rule
-                    # for complete card fixtures.
-                    button_x = template.shape[1] - 50 if filename in {"mercurius", "lucent_academy"} else template.shape[1] // 2
-                    return (x + button_x, y + template.shape[0] - 70)
+                    # 名前テンプレートはカード上端から250px下を切り出して
+                    # いるため、カードの選択ボタン中心(400px)へ戻す。
+                    return (x + template.shape[1] // 2, y + 150)
                 return None
 
             try:

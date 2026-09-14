@@ -64,6 +64,6 @@ def test_all_configured_guilds_have_ascii_card_templates():
         "フォレスティエ": "forestier", "ルーセント学院": "lucent_academy",
     }
     assert set(config["guilds"]) == set(names)
-    assert all((ROOT / "data/template_migration/templates/guild_cards" / f"{slug}.png").is_file() for slug in names.values())
+    assert all((ROOT / "data/template_migration/templates/guild_names" / f"{slug}.png").is_file() for slug in names.values())
 
 
