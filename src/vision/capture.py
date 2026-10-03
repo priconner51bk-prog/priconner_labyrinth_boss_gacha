@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from scripts.process_utils import run_without_console
 
 
 @dataclass(frozen=True)
@@ -74,7 +81,7 @@ class AdbScreenCapture:
         for attempt in range(3):
             started = time.perf_counter()
             try:
-                result = subprocess.run(
+                result = run_without_console(
                     [self.adb_command, "-s", self.serial, "exec-out", "screencap", "-p"],
                     check=True, capture_output=True, timeout=self.timeout_seconds,
                 )
@@ -88,13 +95,9 @@ class AdbScreenCapture:
             except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
                 last_error = exc
                 if attempt < 2:
-                    # ADBサーバーを再起動してから、同じキャプチャを再試行する。
-                    subprocess.run([self.adb_command, "kill-server"], check=False,
-                                   capture_output=True, timeout=self.timeout_seconds)
-                    subprocess.run([self.adb_command, "start-server"], check=False,
-                                   capture_output=True, timeout=self.timeout_seconds)
-                    subprocess.run([self.adb_command, "connect", self.serial], check=False,
-                                   capture_output=True, timeout=self.timeout_seconds)
+                    # 画面取得失敗のたびにサーバーを落とすと、連続観測側で
+                    # ADB再起動が増幅する。取得だけを限定回数再試行し、復旧は
+                    # GUIの明示的な「ADB再起動」操作に任せる。
                     time.sleep(0.2)
         raise RuntimeError(f"ADB screencap failed after 3 consecutive attempts: {self.serial}") from last_error
 

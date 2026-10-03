@@ -13,7 +13,15 @@ Windows専用です。BlueStacks 5、PowerShell、Windows版Python、Windows用A
 3. [設定と対応範囲](docs/CONFIGURATION.md)
 4. [ドキュメント一覧](docs/INDEX.md)
 
-初回はGUIを起動し、ラビリンス入口画面を認識できることを確認してください。GUIの「試行回数」欄で、確認時は `1`、本番時は必要な回数を設定できます。
+## 起動からガチャまで一括実行
+
+保存済み設定を使ってBlueStacks起動、プリコネ起動・再起動、ラビリンス入口への誘導、対象ボスガチャ、成功後のBlueStacks終了までを1コマンドで実行します。
+
+```powershell
+python scripts/task_run_boss_gacha_live.py
+```
+
+このコマンドはPython操作ウィンドウを必要としません。試行数やギルド、対象ボスを変える場合は `.local_gui_settings.json` を編集するか、引数で上書きします。通信エラーや画面認識失敗時は結果JSONを返して安全停止します。
 
 配布ZIPを使う場合は、`priconner_labyrinth_boss_gacha.zip` を展開し、展開先をPowerShellの作業フォルダーにしてから[セットアップ手順](docs/SETUP.md)を実行してください。
 
@@ -24,6 +32,14 @@ python main.py
 ```
 
 CLIで実行する場合は `--passports N` で最大試行回数を指定できます。これはパスポート消費数ではありません。ボスガチャは撤退運用のため、パスポートは消費しません。
+
+BlueStacksの起動とラビリンス入口への誘導だけを行い、ガチャを始めずに止める場合は次の準備専用コマンドを使います。
+
+```powershell
+python scripts/task_prepare_boss_gacha_live.py
+```
+
+BlueStacksの実行ファイル、インスタンス名、ADB serialが既定値と異なる場合は、`--launcher`、`--instance`、`--serial` を指定してください。処理結果はJSONで返り、画面を確認できない場合は安全停止します。
 
 ## 対応範囲
 

@@ -66,7 +66,9 @@ GUIを使う場合は、プロジェクトルートで次を実行します。
 python main.py
 ```
 
-GUIのADB serial初期値はCLIと同じ `127.0.0.1:5555` です。環境のポートが異なる場合は画面上で変更してください。
+GUIに保存したADB serialは、準備コマンドとCLIの既定値でも共有します。別の接続先を使う場合は `--serial` で明示してください。準備時に選ばれたADB実行ファイルはローカル設定からGUI・ガチャ実行へ引き継がれます。ADBの異なるバージョンを混在させないでください。
+
+通信・接続に失敗した場合は最大3回で停止します。画面操作中の失敗でADBサーバーを自動再起動することはありません。必要な場合は、他のライブ処理が停止していることを確認してGUIの「ADB再起動」を使ってください。
 
 ホーム画面から入口へ移動する補助コマンドを含め、実機操作経路はOCR依存なしで動作します。
 
@@ -78,7 +80,7 @@ GUIのADB serial初期値はCLIと同じ `127.0.0.1:5555` です。環境のポ�
 
 ADB、画面観測、許容ボス、テンプレート、画面遷移、対象ボス名などを確認できない場合は、入力を行わず終了します。
 
-実行ログは本プロジェクトの `data/observations/live/` に保存されます。主なファイルは `boss_gacha_operations.jsonl`（操作記録）、`boss_gacha_operations.md`（人向け操作記録）、`boss_gacha_timing.jsonl`（待機時間）、`task_boss_gacha_*.png`（デバッグキャプチャ）です。
+実行ログは本プロジェクトの `data/observations/live/task_boss_gacha_runs/<実行ID>/` に実行ごとに保存されます。主なファイルは `boss_gacha_operations.jsonl`（操作記録）、`boss_gacha_operations.md`（人向け操作記録）、`boss_gacha_timing.jsonl`（待機時間）、`task_boss_gacha_*.png`（デバッグキャプチャ）です。
 
 ## 異常時
 

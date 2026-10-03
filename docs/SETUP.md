@@ -1,4 +1,4 @@
-# v12 ZIPからのセットアップとBlueStacks設定
+# ZIPからのセットアップとBlueStacks設定
 
 ## 対応環境
 
@@ -70,10 +70,18 @@ adb -s 127.0.0.1:5555 shell wm density
 
 ## 初回実行
 
-ラビリンス入口画面を表示し、まずGUIから確認します。GUIの「試行回数」は初回確認では `1` にしてください。
+保存済みのギルド・対象ボス・試行回数で、BlueStacks起動からボス一致、成功後のBlueStacks終了までを一度に行う場合:
 
 ```powershell
-python main.py
+python scripts/task_run_boss_gacha_live.py
+```
+
+既定では `C:\Program Files\BlueStacks_nxt\HD-Player.exe` の `Nougat32` インスタンスを使います。別の環境では `--launcher`、`--instance`、`--serial` を指定します。接続エラーや画面認識に失敗するとJSONの `safety_stop` で停止します。VPNなどによるタイムアウト・通信エラーは最大3回です。
+
+準備だけ行って入口で停止する場合は次のコマンドを使います。これはガチャを開始せず、Python操作GUIを開きます。
+
+```powershell
+python scripts/task_prepare_boss_gacha_live.py --serial 127.0.0.1:5555
 ```
 
 ホーム画面から入口へ移動する場合:
@@ -90,7 +98,7 @@ GUIを使う場合:
 python main.py
 ```
 
-GUIのADB serial初期値は `127.0.0.1:5555` です。
+GUIに保存したADB serialを準備・ガチャCLIの既定値にも使います。接続先が異なる場合はGUIで設定するか、CLIに `--serial` を指定してください。準備時に選ばれたADB実行ファイルはローカル設定から後続処理へ引き継ぎます。異なるADBバージョンのクライアントを混在させないでください。
 
 ## セットアップ完了の判定
 

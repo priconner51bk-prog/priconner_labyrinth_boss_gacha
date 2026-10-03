@@ -44,7 +44,7 @@ def main() -> int:
     if image is None:
         print(json.dumps({"status": "safety_stop", "reason": "capture_failed"}, ensure_ascii=False))
         return 2
-    point = _match_center(image, ROOT / "data/observations/live/template_task_notice_close_text.png", 430, 520, 850, 650)
+    point = _match_center(image, ROOT / "data/observations/live/template_task_notice_close_text.png", 430, 590, 850, 700)
     if point is None:
         point = _match_center(image, ROOT / "data/observations/live/template_close_text_compact.png", 430, 520, 850, 650)
     if point is None:

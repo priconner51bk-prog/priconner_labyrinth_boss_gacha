@@ -6,6 +6,11 @@ import subprocess
 import time
 from collections.abc import Callable, Iterable
 
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct script invocation puts this directory on sys.path.
+    from process_utils import run_without_console
+
 
 def screen_error_message(exc: BaseException, serial: str) -> str:
     """画面取得失敗を、復旧方法付きの短いメッセージへ変換する。"""
@@ -20,7 +25,7 @@ def screen_error_message(exc: BaseException, serial: str) -> str:
 def relaunch_game_from_title(serial: str) -> dict[str, object]:
     """タイトル画面の開始位置を1回だけタップする。"""
     try:
-        subprocess.run(
+        run_without_console(
             ["adb", "-s", serial, "shell", "input", "tap", "640", "670"],
             check=True, capture_output=True, text=True, timeout=5,
         )

@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import ctypes
 import hashlib
+import io
 import json
 import re
 import subprocess
 import sys
 import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 SUBPROJECT = Path(__file__).resolve().parents[1]
@@ -34,15 +39,140 @@ from boss_gacha.guild_selection import scan_directions
 from decision.operation_log import OperationLogger
 from decision.timing import AdaptiveWaitPolicy
 from decision.timing_trace import TimingTrace
+from scripts.adb_runtime import (
+    pin_adb_environment,
+    resolve_adb_path,
+    resolve_adb_serial,
+    restore_adb_environment,
+    snapshot_adb_environment,
+)
 from scripts.labyrinth_route import (
     ADB_BUTTON_COORDINATES,
+    SwipeOutcomeUnknownError,
     run_adb_coordinate_sequence,
     run_adb_swipe,
     screen_coordinate,
 )
 from scripts.live_cli_utils import screen_error_message
+from scripts.process_utils import run_without_console
+from scripts.task_enter_labyrinth_live import _acquire_device_lock
 from vision.capture import AdbScreenCapture
 from vision.template_screen_probe import load_template_probe_config
+
+
+def terminate_bluestacks_process(target_pid: int | None = None) -> dict[str, object]:
+    """Force-close the BlueStacks player window owner when a gacha run ends.
+
+    BlueStacks' X button opens a confirmation dialog, so shutdown must target
+    the process directly. Prefer its known window title; otherwise validate
+    the foreground window owner as HD-Player.exe before terminating it.
+    """
+    if sys.platform != "win32":
+        return {"status": "skipped", "reason": "windows_only"}
+
+    user32 = ctypes.windll.user32
+    pids: list[int] = []
+    enum_callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+
+    def visit(hwnd, _lparam):
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        title = ctypes.create_unicode_buffer(512)
+        user32.GetWindowTextW(hwnd, title, len(title))
+        if title.value.strip() != "BlueStacks App Player":
+            return True
+        process_id = ctypes.c_ulong()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+        if process_id.value and process_id.value not in pids:
+            pids.append(process_id.value)
+        return True
+
+    callback = enum_callback_type(visit)
+    if target_pid is not None:
+        try:
+            lookup = run_without_console(
+                ["tasklist", "/FI", f"PID eq {target_pid}", "/FO", "CSV", "/NH"],
+                check=False, capture_output=True, text=True, timeout=10,
+            )
+            rows = list(csv.reader(io.StringIO(lookup.stdout)))
+            if (lookup.returncode == 0 and rows and rows[0]
+                    and rows[0][0].casefold() == "hd-player.exe"):
+                pids.append(target_pid)
+            else:
+                return {"status": "not_found", "reason": "target_player_process_not_found",
+                        "pid": target_pid}
+        except (OSError, subprocess.SubprocessError) as exc:
+            return {"status": "error", "pid": target_pid,
+                    "error_type": type(exc).__name__, "error": str(exc)[:300]}
+
+    if target_pid is None and not user32.EnumWindows(callback, 0):
+        return {"status": "not_found", "reason": "window_enumeration_failed"}
+
+    if target_pid is None and not pids:
+        foreground = user32.GetForegroundWindow()
+        if foreground and user32.IsWindowVisible(foreground):
+            process_id = ctypes.c_ulong()
+            user32.GetWindowThreadProcessId(foreground, ctypes.byref(process_id))
+            if process_id.value:
+                try:
+                    lookup = run_without_console(
+                        ["tasklist", "/FI", f"PID eq {process_id.value}", "/FO", "CSV", "/NH"],
+                        check=False, capture_output=True, text=True, timeout=10,
+                    )
+                    rows = list(csv.reader(io.StringIO(lookup.stdout)))
+                    if (lookup.returncode == 0 and rows and rows[0]
+                            and rows[0][0].casefold() == "hd-player.exe"):
+                        pids.append(process_id.value)
+                except (OSError, subprocess.SubprocessError):
+                    pass
+
+    if not pids:
+        return {"status": "not_found", "reason": "visible_player_window_not_found"}
+
+    terminated: list[int] = []
+    errors: list[dict[str, object]] = []
+    for process_id in pids:
+        try:
+            result = run_without_console(
+                ["taskkill", "/PID", str(process_id), "/T", "/F"],
+                check=False, capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0:
+                terminated.append(process_id)
+            else:
+                errors.append({"pid": process_id, "returncode": result.returncode,
+                               "stderr": result.stderr.strip()[-300:]})
+        except (OSError, subprocess.SubprocessError) as exc:
+            errors.append({"pid": process_id, "error_type": type(exc).__name__, "error": str(exc)})
+    if errors:
+        return {"status": "error", "terminated_pids": terminated, "errors": errors}
+    return {"status": "terminated", "pids": terminated}
+
+
+def shutdown_bluestacks_after_gacha(result: dict, target_pid: int | None = None) -> dict:
+    """Close BlueStacks only after the gacha run completed normally.
+
+    A safety stop is an aborted run, not a completed gacha session. Keeping
+    the emulator open lets the operator inspect and recover its current screen.
+    """
+    if result.get("status") not in {"matched", "max_attempts"}:
+        result["bluestacks_shutdown"] = {
+            "status": "skipped",
+            "reason": "gacha_not_completed",
+            "gacha_status": result.get("status"),
+        }
+        return result
+
+    try:
+        result["bluestacks_shutdown"] = (
+            terminate_bluestacks_process(target_pid)
+            if target_pid is not None else terminate_bluestacks_process()
+        )
+    except Exception as exc:  # noqa: BLE001 - shutdown diagnostics must not hide the gacha result
+        result["bluestacks_shutdown"] = {
+            "status": "error", "error_type": type(exc).__name__, "error": str(exc)[:300],
+        }
+    return result
 
 
 def ensure_adb_device(serial: str) -> dict:
@@ -55,12 +185,22 @@ def relaunch_game_from_title(*, serial: str = "127.0.0.1:5555", **_kwargs) -> di
     return {"ok": True, "stage": "title_tap", "serial": serial}
 
 
-def main() -> int:
+def create_evidence_run_dir(base: Path) -> Path:
+    """Reserve one exclusive directory for this invocation's evidence."""
+    run_id = f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}_{uuid.uuid4().hex}"
+    run_dir = base / "task_boss_gacha_runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir
+
+
+def _run_gacha() -> int:
     parser = argparse.ArgumentParser(description="画面ガード付きボスガチャ（最大1000回）")
     parser.add_argument("--execute", action="store_true", help="ADB入力を有効化（省略時はpreflightのみ）")
     parser.add_argument("--passports", "--attempts", dest="passports", type=int, default=1000, help="今回許可する試行回数（既定値:1000）")
-    parser.add_argument("--serial", default="127.0.0.1:5555")
-    parser.add_argument("--guild", help="出発時に選択するギルド（省略時は設定のpreferred_guilds先頭）")
+    parser.add_argument("--serial", default=resolve_adb_serial())
+    parser.add_argument("--bluestacks-pid", type=int, help=argparse.SUPPRESS)
+    parser.add_argument("--adb", help="この実行全体で使うADB実行ファイル")
+    parser.add_argument("--guild", help="出発時に選択するギルド（省略時はGUI保存値、次にカォン）")
     parser.add_argument("--difficulty", type=int, choices=range(1, 11), default=10,
                         help="難易度（既定値: 10。現在の画面操作は難易度10を想定）")
     parser.add_argument("--area3-boss", action="append", default=[],
@@ -71,21 +211,28 @@ def main() -> int:
     parser.add_argument("--rec-model", type=Path)
     parser.add_argument("--default-models", action="store_true", help="互換引数（現在は無視。テンプレート判定を使用）")
     parser.add_argument("--title-recovery-only", action="store_true", help="タイトル画面からの安全復帰だけを実行")
+    parser.add_argument("--lock-held", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.passports < 0:
         parser.error("--passports must be non-negative")
 
-    live_dir = ROOT / "data" / "observations" / "live"
+    try:
+        adb_path = resolve_adb_path(args.adb)
+    except OSError as exc:
+        print(json.dumps({"status": "safety_stop", "reason": str(exc), "execute": args.execute}, ensure_ascii=False))
+        return 2
+    if not adb_path:
+        print(json.dumps({"status": "safety_stop", "reason": "adb_not_found", "execute": args.execute}, ensure_ascii=False))
+        return 2
+    args.adb = adb_path
+    pin_adb_environment(adb_path)
+
+    live_dir = create_evidence_run_dir(ROOT / "data" / "observations" / "live")
     trace = TimingTrace(live_dir / "boss_gacha_timing.jsonl", task="task_boss_gacha")
-    capture = AdbScreenCapture(serial=args.serial, timing_trace=trace)
+    capture = AdbScreenCapture(serial=args.serial, adb_command=adb_path, timing_trace=trace)
     screenshot_index = {"value": 0}
     last_observed_screen = {"value": None}
     screenshot_hashes: set[str] = set()
-    for existing in live_dir.glob("task_boss_gacha_screen_*.png"):
-        try:
-            screenshot_hashes.add(hashlib.sha256(existing.read_bytes()).hexdigest())
-        except OSError:
-            pass
 
     def save_gacha_screenshot(label: str) -> Path | None:
         """ガチャ実行中の画面を証跡として保存する。"""
@@ -133,6 +280,17 @@ def main() -> int:
                 observed = probe.observe_screen()
             except Exception as exc:
                 last_error = exc
+                if isinstance(exc, RuntimeError) and str(exc).startswith(
+                    "ADB screencap failed after 3 consecutive attempts:"
+                ):
+                    print(json.dumps({
+                        "screen_probe_error": {
+                            "attempts": attempt + 1,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                    }, ensure_ascii=False), file=sys.stderr)
+                    raise RuntimeError("screen_capture_failed; ADB server was not restarted") from exc
                 observed = None
             if observed:
                 if last_observed_screen["value"] != observed:
@@ -202,7 +360,7 @@ def main() -> int:
                 run_adb_coordinate_sequence([(640, 670)], serial=args.serial, task_name="title_recovery", timing_trace=trace)
                 print(json.dumps({"status": "startup_transition", "title_tap_count": 1, "execute": True}, ensure_ascii=False))
         if args.title_recovery_only or startup_state == "title":
-            label = "タイトルへ"
+            label = "Touch To Start"
             if args.title_recovery_only:
                 recovery = relaunch_game_from_title(serial=args.serial)
                 if not recovery.get("ok", False):
@@ -211,11 +369,21 @@ def main() -> int:
             if startup_state == "title" and args.execute:
                 point = probe.target_center(label) if probe.target_visible(label) else None
                 if point is None:
-                    print(json.dumps({"status": "safety_stop", "stop_reason": "title_button_not_confirmed"}, ensure_ascii=False))
+                    print(json.dumps({"status": "safety_stop", "reason": "title_start_button_not_confirmed"}, ensure_ascii=False))
                     return 2
-                run_adb_coordinate_sequence([point], serial=args.serial, task_name="title_recovery", timing_trace=trace)
-                print(json.dumps({"status": "startup_transition", "title_tap_count": 1, "execute": True}, ensure_ascii=False))
+                run_adb_coordinate_sequence(
+                    [point], serial=args.serial, task_name="title_start", timing_trace=trace,
+                    timing_policy=AdaptiveWaitPolicy(timeout_seconds=30.0, poll_seconds=0.5),
+                    screen_probe=observe_screen_stable,
+                    require_screen_change=True, previous_screen_token="title",
+                )
+                print(json.dumps({"status": "startup_transition", "title_tap_count": 1,
+                                  "start_button_point": list(point), "execute": True}, ensure_ascii=False))
             screen_id = observe_screen_stable()
+            if screen_id == "startup_error":
+                print(json.dumps({"status": "safety_stop", "reason": "startup_network_timeout",
+                                  "screen_id": screen_id, "retry": False, "execute": True}, ensure_ascii=False))
+                return 2
             if args.title_recovery_only:
                 print(json.dumps({"status": "title_recovery_ok", "screen_id": screen_id, "execute": args.execute}, ensure_ascii=False))
                 return 0
@@ -259,6 +427,15 @@ def main() -> int:
         guild_data = json.loads(guild_config.read_text(encoding="utf-8"))
         preferred = guild_data.get("selection_policy", {}).get("preferred_guilds", [])
         default_guild = str(preferred[0]).strip() if preferred else "フォレスティエ"
+        if "自警団（カォン）" in guild_data.get("guilds", {}):
+            default_guild = "自警団（カォン）"
+        try:
+            gui_settings = json.loads((ROOT / ".local_gui_settings.json").read_text(encoding="utf-8"))
+            saved_guild = gui_settings.get("guild") if isinstance(gui_settings, dict) else None
+            if isinstance(saved_guild, str) and saved_guild in guild_data.get("guilds", {}):
+                default_guild = saved_guild
+        except (OSError, ValueError, TypeError):
+            pass
     except (OSError, ValueError, TypeError, AttributeError, IndexError) as exc:
         default_guild = "フォレスティエ"
         print(json.dumps({
@@ -316,10 +493,10 @@ def main() -> int:
     frame_index = {"value": 0}
 
     def wait_screen(expected: str) -> bool:
-        # 通常遷移は2秒で打ち切る。ただしギルド選択確認と、出発後の
-        # ギルド選択への遷移は通常の2秒待機。確認ダイアログだけは
-        # 実機で描画が遅れるため8秒待つ。
-        timeout = 8.0 if expected == "guild_confirm" else 2.0
+        # 出発直後のギルド選択は実機で読み込みに数秒かかるため、
+        # 2秒では描画中に停止することがあった。短い遷移は2秒、
+        # ギルド選択は12秒、確認ダイアログは8秒まで待つ。
+        timeout = 12.0 if expected == "guild_select" else (8.0 if expected == "guild_confirm" else 2.0)
         if expected == "guild_select":
             print(json.dumps({"gacha_progress": True, "phase": "wait_guild_select", "timeout_s": timeout}, ensure_ascii=False), flush=True)
         deadline = time.monotonic() + timeout
@@ -466,6 +643,8 @@ def main() -> int:
                         point = template_point(cv2.imread(str(path), cv2.IMREAD_COLOR))
                         if point is not None:
                             return point
+                except SwipeOutcomeUnknownError:
+                    raise
                 except Exception as exc:
                     print(json.dumps({
                         "nonfatal_probe_error": {
@@ -513,6 +692,8 @@ def main() -> int:
                                   healthcheck=True,
                                   screen_guard=lambda: observe_screen_stable() == "guild_select",
                                   task_name="guild_select_page_scan", timing_trace=trace)
+                except SwipeOutcomeUnknownError:
+                    raise
                 except Exception as exc:
                     print(json.dumps({
                         "nonfatal_probe_error": {
@@ -579,11 +760,11 @@ def main() -> int:
             # 未一致時は入力せず安全停止する。
             if screen_matches and dynamic_point is not None:
                 break
-            if screen_matches and probe.target_visible(probe_label):
-                break
-            if dynamic_point is not None:
-                break
-            if screen == "guild_select" and label not in probe.targets:
+            # 「ラビリンス」はギルド名と通常メニュー名の両方に使われる。
+            # 画面共通の文字テンプレートを先に許可すると、ギルド専用カードの
+            # 検出経路を通らず、正しいカードを選べないことがある。ギルド画面は
+            # 登録済みギルド名テンプレートで選択位置を確認する。
+            if screen == "guild_select" and screen_matches:
                 if not guild_template_started:
                     print(json.dumps({"gacha_progress": True, "phase": "guild_template_match_start", "guild": label}, ensure_ascii=False), flush=True)
                     guild_template_started = True
@@ -591,6 +772,13 @@ def main() -> int:
                 if dynamic_point is not None:
                     print(json.dumps({"gacha_progress": True, "phase": "guild_template_match_success", "guild": label, "point": list(dynamic_point)}, ensure_ascii=False), flush=True)
                     break
+                # dynamic_guild_point has scanned the visible cards/pages. Do not
+                # fall back to a same-named target from another screen.
+                return False
+            if screen_matches and probe.target_visible(probe_label):
+                break
+            if dynamic_point is not None:
+                break
             time.sleep(0.08)
         else:
             return False
@@ -744,10 +932,42 @@ def main() -> int:
         read_start.pop("screen", "initial_char"), target_left=tuple(args.area3_boss)
     )
     result = runner.run()
+    # The player X button prompts for confirmation. Close the process only
+    # after a completed gacha session; leave it open after safety stops.
+    shutdown_bluestacks_after_gacha(result, args.bluestacks_pid)
     # Keep the CLI contract one JSON object per line; callers use the final
     # line as the terminal result and must never parse an indented fragment.
     print(json.dumps(result, ensure_ascii=False))
     return 0 if result.get("status") == "matched" else 2
+
+
+def main() -> int:
+    environment_snapshot = snapshot_adb_environment()
+    if any(option in sys.argv[1:] for option in ("-h", "--help")):
+        try:
+            return _run_gacha()
+        finally:
+            restore_adb_environment(environment_snapshot)
+    serial = resolve_adb_serial()
+    for index, argument in enumerate(sys.argv[1:]):
+        if argument == "--serial" and index + 2 <= len(sys.argv[1:]):
+            serial = sys.argv[index + 2]
+            break
+        if argument.startswith("--serial="):
+            serial = argument.partition("=")[2]
+            break
+    lock = None
+    if "--lock-held" not in sys.argv[1:]:
+        lock = _acquire_device_lock(serial)
+        if lock is None:
+            print(json.dumps({"status": "safety_stop", "reason": "device_busy", "serial": serial}, ensure_ascii=False))
+            return 2
+    try:
+        return _run_gacha()
+    finally:
+        restore_adb_environment(environment_snapshot)
+        if lock is not None:
+            lock.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

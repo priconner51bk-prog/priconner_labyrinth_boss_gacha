@@ -61,17 +61,17 @@ adb -s 127.0.0.1:5555 shell wm density
 
 対象端末が `device`、画面サイズが `1280x720`、DPIが `240` になっていることを確認してください。
 
-### 5. GUIを起動
+### 5. 起動からガチャまで一括実行
 
-まずGUIを起動します。
+次のコマンドでBlueStacks起動、プリコネ起動・再起動、ラビリンス入口への誘導、対象ボスガチャまで連続実行します。条件一致後はBlueStacksプロセスを終了します。
 
 ```powershell
-python main.py
+python scripts/task_run_boss_gacha_live.py
 ```
 
-GUIのADB serialは通常 `127.0.0.1:5555` です。ポートが異なる場合はGUI上で変更してください。
+試行数、ギルド、対象ボス、ADB serialは `.local_gui_settings.json` から読み込みます。変更する場合は各オプションを指定してください。VPNなどによるタイムアウト・通信エラーは最大3回で安全停止し、結果JSONを表示します。Python操作GUIは不要です。
 
-初回確認ではGUIの「試行回数」を `1` にし、ラビリンス入口画面で確認・実行します。認識と画面遷移に問題がなければ、本番用の試行回数へ変更してください。
+準備だけ行って入口で停止する場合は `python scripts/task_prepare_boss_gacha_live.py --serial 127.0.0.1:5555` を使います。
 
 ### トラブルシューティング
 

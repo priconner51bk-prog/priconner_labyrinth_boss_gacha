@@ -1,43 +1,31 @@
-# 配布最小構成マニフェスト
+# 配布ZIPマニフェスト
 
 生成物: `distribution/priconner_labyrinth_boss_gacha.zip`
-検査結果: 126エントリ、画面11件・ターゲット18件、参照切れ0件、禁止対象混入0件。L03経路削除後に再生成。
 
-## ZIP配布対象
+生成・検査: `python scripts/build_distribution.py` / `python scripts/build_distribution.py --check`
 
-- `main.py`
-- `src/`
-- `scripts/task*.py`
-- `scripts/labyrinth_route.py`
-- `scripts/live_cli_utils.py`
-- `scripts/check_live_environment.py`
-- `scripts/start_boss_gacha.ps1`
-- `configs/`
-- `data/template_migration/templates/`
-- `data/observations/live/template_*.png`
-- `requirements.txt`
-- `README.md`
-- `SECURITY.md`
-- `docs/SETUP.md`
-- `docs/OPERATIONS.md`
-- `docs/CONFIGURATION.md`
+実測: **102エントリ**（ファイル101件と `SHA256SUMS.json` 1件）
 
-## ZIPから除外
+ZIP SHA-256: `24adb940b8e04eff993d4ceac6aecfebc340c54136385f62511397aac19dcf64`
 
-- `data/observations/live/` の実機キャプチャ、ログ、OCR結果（`template_*.png` を除く）
-- `tests/`、`reports/`、`artifacts/`、`models/`、`local/`
-- `data/template_migration/source/` と `crops/` の取得元画像・ROI作業画像
-- 個人環境や実機状態を含むレポート
+`SHA256SUMS.json` は全101ファイルのソースSHA-256を記録する。検査コマンドはZIP内ファイルと現行ソースのハッシュを全件照合し、ZIP全体も固定時刻・固定順序・無圧縮で再生成してバイト単位で比較する。
 
-## 公開前の停止条件
+## 配布境界
 
-- 必須の実行スクリプトまたはテストが未追跡の場合
-- 配布対象とローカル専用の境界が未確認の場合
-- clean cloneで依存関係・CLIヘルプ・検査・テストを確認できない場合
-- 実機キャプチャ、ADBログ、アカウント情報が公開対象へ混入する場合
+- `main.py`、`requirements.txt`、配布用の `README.md` と `SECURITY.md`
+- `docs/SETUP.md`、`docs/OPERATIONS.md`、`docs/CONFIGURATION.md`
+- GUI/CLI、BlueStacks起動、プリコネ再起動、入口移動に必要な `scripts/`、`src/boss_gacha/`、`src/contracts/`、`src/decision/`、`src/vision/` の明示許可ファイル
+- 実行経路で参照する `configs/` の6件
+- 全ボス名・ギルド名テンプレートと `configs/live_screen_templates.json` が参照する画像
 
-ZIP作成後は、内容一覧に上記の除外対象が混入していないことを確認する。
+許可リストの正本は [生成スクリプト](../scripts/build_distribution.py) の `FILES` と `files()`。展開済みの `distribution/` 直下の作業コピーはZIPの入力に使用しない。
 
-## 現行ZIPの扱い
+## 自動検査
 
-配布ZIPは `priconner_labyrinth_boss_gacha.zip` だけを使用する。バージョン番号付きの旧ZIPは配布ディレクトリに残さない。
+- ZIPエントリの許可リスト完全一致、`.pyc`・`__pycache__`・`*.egg-info`・旧機能ファイル・ローカル証跡の混入0件
+- Markdown相対リンクと画面設定の参照画像に欠落0件
+- 一時ディレクトリへ展開後、GUIランチャー・live CLI・実行CLI・環境検査CLIの `--help` 成功
+- ADBを存在しないコマンドに指定したオフラインpreflightで、端末未接続として終了し、画面テンプレート検査のみ成功
+- CIで `python scripts/build_distribution.py --check` を実行
+
+実機へのADB入力はこの検査に含めない。実機確認は `docs/TASKS.md` の QV-07 に従う。

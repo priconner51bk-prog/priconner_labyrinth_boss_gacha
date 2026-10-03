@@ -14,6 +14,10 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+from scripts.adb_runtime import ADB_PATH_ENV, resolve_adb_path, resolve_adb_serial
+from scripts.process_utils import run_without_console
+from scripts.task_enter_labyrinth_live import _acquire_device_lock
+
 ROOT = Path(__file__).resolve().parent
 GUI_SETTINGS = ROOT / ".local_gui_settings.json"
 
@@ -35,7 +39,7 @@ def _guild_names() -> tuple[str, ...]:
             return tuple(str(name) for name in guilds)
     except (OSError, ValueError, TypeError):
         pass
-    return ("美食殿", "フォレスティエ")
+    return ("自警団（カォン）", "美食殿", "フォレスティエ")
 
 
 def _run_mode(mode: str, forwarded: list[str]) -> int:
@@ -58,18 +62,26 @@ class BossGachaWindow:
         self.root.geometry("700x560")
         self.process: subprocess.Popen[str] | None = None
         self.output_queue: queue.Queue[str] = queue.Queue()
+        try:
+            self.adb_command = resolve_adb_path()
+        except OSError as exc:
+            self.adb_command = None
+            self.output_queue.put(f"[ADB設定エラー] {exc}")
 
         ttk.Label(root, text="対象ウィンドウ：BlueStacks（Android画面 1280x720）", padding=(12, 8)).pack(fill="x")
         form = ttk.Frame(root, padding=12)
         form.pack(fill="x")
-        self.serial = self._entry(form, "ADB serial", "127.0.0.1:5555", 0)
+        self.serial = self._entry(form, "ADB serial", resolve_adb_serial(settings_path=GUI_SETTINGS), 0)
         self.passports = self._entry(form, "試行回数", "1000", 1)
         ttk.Label(form, text="ギルド").grid(row=2, column=0, sticky="w", pady=3)
         self.guild = ttk.Combobox(form, values=self.GUILDS, state="readonly", width=30)
-        self.guild.set("美食殿")
+        default_guild = "自警団（カォン）" if "自警団（カォン）" in self.GUILDS else (
+            self.GUILDS[0] if self.GUILDS else "美食殿"
+        )
+        self.guild.set(default_guild)
         self.guild.grid(row=2, column=1, sticky="ew", pady=3)
         self.area3_vars = self._boss_checks(form, "エリア3 許容ボス", self.AREA3_BOSSES, 4, "ベノムサラマンドラ")
-        self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ラースドラゴン")
+        self.area5_vars = self._boss_checks(form, "エリア5 許容ボス", self.AREA5_BOSSES, 5, "ゴブリンロード")
         self._load_gui_settings()
         form.columnconfigure(1, weight=1)
 
@@ -144,13 +156,21 @@ class BossGachaWindow:
             pass
 
     def _command(self, *, resume: bool = False) -> list[str]:
+        try:
+            adb_command = resolve_adb_path()
+        except OSError as exc:
+            raise ValueError(f"ADB実行ファイルを確認できません: {exc}") from exc
         serial, passports = self.serial.get().strip(), self.passports.get().strip()
         area3 = [name for name, variable in self.area3_vars.items() if variable.get()]
         area5 = [name for name, variable in self.area5_vars.items() if variable.get()]
         if not serial or not passports or not area3 or not area5:
-            raise ValueError("ADB serial、パスポート枚数、エリア3/5のボス名を入力してください。")
+            raise ValueError("ADB serial、試行回数、エリア3/5のボス名を入力してください。")
+        if not adb_command:
+            raise ValueError("ADB実行ファイルが見つかりません。準備スクリプトを再実行してください。")
+        self.adb_command = adb_command
         command = [sys.executable, "-u", str(ROOT / "scripts" / "task_boss_gacha_live.py"), "--execute",
                    "--serial", serial, "--passports", passports,
+                   "--adb", adb_command,
                    "--area3-boss", area3[0], "--area5-boss", area5[0], "--guild", self.guild.get().strip()]
         for name in area3[1:]:
             command += ["--area3-boss", name]
@@ -176,20 +196,37 @@ class BossGachaWindow:
         self.status.configure(text="ADB再起動中")
 
         def worker() -> None:
+            lock = None
             try:
-                commands = (["adb", "kill-server"], ["adb", "start-server"], ["adb", "devices"])
+                adb_command = resolve_adb_path()
+                if not adb_command:
+                    raise FileNotFoundError("adb_not_found")
+                lock = _acquire_device_lock(serial)
+                if lock is None:
+                    raise RuntimeError("device_busy")
+                self.adb_command = adb_command
+                commands = [[adb_command, "kill-server"], [adb_command, "start-server"]]
+                if ":" in serial:
+                    commands.append([adb_command, "connect", serial])
+                commands.append([adb_command, "devices"])
                 outputs: list[str] = []
                 for command in commands:
-                    result = subprocess.run(command, check=False, capture_output=True, text=True,
+                    result = run_without_console(command, check=False, capture_output=True, text=True,
                                             encoding="utf-8", errors="replace", timeout=15)
                     outputs.append(f"$ {' '.join(command)}\n{result.stdout}{result.stderr}".strip())
                     if result.returncode != 0:
                         raise RuntimeError(f"ADB command failed: {' '.join(command)}")
+                device_lines = [line.split() for line in result.stdout.splitlines()]
+                if not any(len(fields) >= 2 and fields[0] == serial and fields[1] == "device"
+                           for fields in device_lines):
+                    raise RuntimeError(f"ADB device not ready after restart: {serial}")
                 self.output_queue.put("[ADB再起動完了]\n" + "\n".join(outputs))
                 self.output_queue.put(f"[ADB対象] {serial or '(未指定)'}")
             except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError) as exc:
                 self.output_queue.put(f"[ADB再起動失敗] {type(exc).__name__}: {exc}")
             finally:
+                if lock is not None:
+                    lock.unlink(missing_ok=True)
                 self.root.after(0, lambda: self.adb_button.configure(state="normal"))
                 self.root.after(0, lambda: self.status.configure(text="待機中"))
 
@@ -202,7 +239,11 @@ class BossGachaWindow:
 
         def worker() -> None:
             try:
-                result = subprocess.run(["adb", "devices"], check=False, capture_output=True, text=True,
+                adb_command = resolve_adb_path()
+                if not adb_command:
+                    raise FileNotFoundError("adb_not_found")
+                self.adb_command = adb_command
+                result = run_without_console([adb_command, "devices"], check=False, capture_output=True, text=True,
                                         encoding="utf-8", errors="replace", timeout=10)
                 devices = []
                 for line in result.stdout.splitlines():
@@ -251,8 +292,15 @@ class BossGachaWindow:
             return
         environment = os.environ.copy()
         environment["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT), environment.get("PYTHONPATH", "")))
+        adb_command = resolve_adb_path()
+        if not adb_command:
+            messagebox.showerror("ADB設定エラー", "ADB実行ファイルが見つかりません。準備スクリプトを再実行してください。")
+            return
+        environment[ADB_PATH_ENV] = adb_command
+        environment["PATH"] = str(Path(adb_command).parent) + os.pathsep + environment.get("PATH", "")
         self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+                                        stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self.start_button.configure(state="disabled")
         self.stop_button.configure(state="normal")
         self.resume_button.configure(state="disabled")
@@ -300,6 +348,10 @@ class BossGachaWindow:
             "safety_stop": "停止：安全停止（入力を継続しません）",
         }
         label = labels.get(payload.get("status"))
+        if payload.get("status") == "safety_stop" and payload.get("reason") == "startup_network_timeout":
+            label = "停止：プリコネの通信タイムアウトを検出"
+        if payload.get("status") == "safety_stop" and payload.get("reason") == "communication_retries_exhausted":
+            label = f"停止：通信エラーが{payload.get('attempt_count', 3)}回続いたため中断"
         if label:
             self.status.configure(text=label)
 

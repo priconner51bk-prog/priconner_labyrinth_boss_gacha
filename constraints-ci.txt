@@ -1,0 +1,16 @@
+# Python 3.11 CI/test dependency set. Update as described in docs/AUTOMATED_TESTS.md.
+annotated-types==0.7.0
+colorama==0.4.6
+coverage==7.16.1
+iniconfig==2.3.0
+numpy==2.3.5
+opencv-python==4.13.0.92
+packaging==26.2
+pluggy==1.6.0
+pydantic==2.13.3
+pydantic-core==2.46.3
+Pygments==2.20.0
+pytest==8.4.2
+ruff==0.16.5
+typing-extensions==4.15.0
+typing-inspection==0.4.2

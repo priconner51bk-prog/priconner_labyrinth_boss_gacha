@@ -89,3 +89,41 @@ def test_runner_reports_passport_exhaustion_after_early_reject():
     assert result["status"] == "safety_stop"
     assert result["reason"] == "passport_count_exhausted"
     assert events == ["begin", "withdraw"]
+
+
+def test_runner_stops_on_missing_boss_area_without_withdrawing():
+    events = []
+    runner = BossGachaRunner(
+        BossGachaController(BossGachaPolicy({"3": "対象A", "5": "対象B"})),
+        begin_attempt=lambda: events.append("begin"),
+        read_boss_names=lambda: {"3": "対象A"},
+        withdraw=lambda: events.append("withdraw"),
+        passport_count=lambda: 1,
+        safety_check=lambda: True,
+    )
+    result = runner.run()
+    assert result["status"] == "safety_stop"
+    assert result["reason"] == "boss_names_missing"
+    assert result["attempt"] == 1
+    assert events == ["begin"]
+
+
+def test_runner_stops_when_phase_guard_raises_before_input():
+    events = []
+
+    def failed_guard(_phase):
+        raise OSError("screen unavailable")
+
+    runner = BossGachaRunner(
+        BossGachaController(BossGachaPolicy({"3": "対象"})),
+        begin_attempt=lambda: events.append("begin"),
+        read_boss_names=lambda: {"3": "対象"},
+        withdraw=lambda: events.append("withdraw"),
+        passport_count=lambda: 1,
+        safety_check=lambda: True,
+        phase_guard=failed_guard,
+    )
+    result = runner.run()
+    assert result["status"] == "safety_stop"
+    assert result["reason"] == "phase_guard_error:safety_check:OSError"
+    assert events == []

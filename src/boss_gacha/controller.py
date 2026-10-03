@@ -24,18 +24,25 @@ class BossGachaPolicy:
             raise ValueError(f"max_attempts must be <= {HARD_MAX_ATTEMPTS}")
         if not self.target_bosses:
             raise ValueError("target_bosses must not be empty")
-        if self.allowed_bosses is not None and not self.allowed_bosses:
-            raise ValueError("allowed_bosses must not be empty")
+        if self.allowed_bosses is not None:
+            if set(self.allowed_bosses) != set(self.target_bosses):
+                raise ValueError("allowed_bosses areas must match target_bosses")
+            for area, names in self.allowed_bosses.items():
+                if (isinstance(names, (str, bytes)) or not isinstance(names, Sequence)
+                        or not names or any(not isinstance(name, str) or not name.strip()
+                                         for name in names)):
+                    raise ValueError(f"allowed_bosses[{area}] must contain non-empty boss names")
 
     @classmethod
     def from_json(cls, path: str | Path) -> BossGachaPolicy:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         allowed = data.get("allowed_bosses")
+        if "allowed_bosses" in data and not isinstance(allowed, Mapping):
+            raise ValueError("allowed_bosses must be an object")
         return cls(
             target_bosses={str(k): str(v) for k, v in data["target_bosses"].items()},
             max_attempts=int(data.get("max_attempts", 1000)),
-            allowed_bosses={str(k): tuple(str(name) for name in names)
-                           for k, names in allowed.items()}
+            allowed_bosses={str(k): names for k, names in allowed.items()}
             if isinstance(allowed, Mapping) else None,
         )
 

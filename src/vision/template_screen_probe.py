@@ -35,9 +35,13 @@ class AdbTemplateScreenProbe:
         self.targets = dict(targets)
         self.threshold = threshold
         self._last_image = None
+        self._last_color_image = None
         self._template_cache = {}
 
     _SCREEN_TARGETS: ClassVar[dict[str, set[str]]] = {
+        "title": {"Touch To Start"},
+        "startup_error": {"タイトルへ"},
+        "home": {"クエスト"},
         "notice": {"お知らせウィンドウタイトル", "お知らせ閉じる"},
         "labyrinth_top": {"出発", "挑戦中"}, "quest_menu": {"ラビリンス"},
         "guild_select": {"フォレスティエ", "美食殿"}, "guild_confirm": {"ギルド選択確認", "ギルド選択キャンセル"}, "bonus": {"閉じる", "出発ボーナス閉じる"},
@@ -46,17 +50,26 @@ class AdbTemplateScreenProbe:
         "initial_char": {"マップ"}, "boss_map": {"左BOSS", "右BOSS", "撤退する"},
         "withdraw_confirm": {"撤退確認OK", "撤退確認キャンセル"},
     }
+    # Title artwork animates behind the Touch To Start text. On the installed
+    # 12.7.1 screen the stable text scores 0.936 against its ROI, while the
+    # global 0.95 threshold rejects it. Keep this lower threshold scoped to
+    # that single screen and target; all other navigation remains unchanged.
+    _SCREEN_THRESHOLDS: ClassVar[dict[str, float]] = {"title": 0.90, "network_loading": 0.80}
+    _TARGET_THRESHOLDS: ClassVar[dict[str, float]] = {"Touch To Start": 0.90}
 
     def _capture(self):
         path = Path(tempfile.gettempdir()) / "labyrinth_probe_current.png"
         self.capture.capture(path)
-        image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if image is None:
             raise RuntimeError("ADB画面を読み込めません")
-        self._last_image = image
+        self._last_color_image = image
+        self._last_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         return image
 
     def _score(self, current, reference, region: TemplateRegion) -> float:
+        if current.ndim == 3:
+            current = cv2.cvtColor(current, cv2.COLOR_BGR2GRAY)
         c = current[region.top:region.bottom, region.left:region.right]
         key = str(region.image)
         rimg = self._template_cache.get(key)
@@ -86,7 +99,68 @@ class AdbTemplateScreenProbe:
         result = cv2.matchTemplate(c, r, cv2.TM_CCOEFF_NORMED)
         return float(result[0, 0])
 
+    def _matches_shifted_guild_select_header(self, image) -> bool:
+        """Match the guild prompt across its animated background.
+
+        The guild-select banner text is stable, but its translucent background
+        contains moving art. A fixed-ROI grayscale correlation can therefore
+        fail even while the prompt is plainly visible. Edge matching tolerates
+        those background changes and a small horizontal alignment offset.
+        """
+        region = self.screens.get("guild_select")
+        if region is None or getattr(image, "ndim", 0) != 3:
+            return False
+        key = str(region.image)
+        cache = getattr(self, "_template_cache", {})
+        template = cache.get(key)
+        if template is None:
+            template = cv2.imread(key, cv2.IMREAD_GRAYSCALE)
+            if template is None:
+                return False
+            cache[key] = template
+            self._template_cache = cache
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        h, w = gray.shape[:2]
+        left = max(0, region.left - 130)
+        top = max(0, region.top - 18)
+        right = min(w, region.right + 130)
+        bottom = min(h, region.bottom + 18)
+        search = gray[top:bottom, left:right]
+        if search.shape[0] < template.shape[0] or search.shape[1] < template.shape[1]:
+            return False
+        edges = cv2.Canny(search, 50, 150)
+        template_edges = cv2.Canny(template, 50, 150)
+        scores = cv2.matchTemplate(edges, template_edges, cv2.TM_CCOEFF_NORMED)
+        _, score, _, point = cv2.minMaxLoc(scores)
+        match_left = left + point[0]
+        match_top = top + point[1]
+        return bool(
+            score >= 0.88
+            and region.left - 16 <= match_left <= region.right + 140
+            and abs(match_top - region.top) <= 10
+        )
+
     def _classify(self, image) -> str | None:
+        notice_title = self.targets.get("お知らせウィンドウタイトル")
+        notice_close = self.targets.get("お知らせ閉じる")
+        if (notice_title is not None and notice_close is not None
+                and self._score(image, notice_title, notice_title) >= self.threshold
+                and self._score(image, notice_close, notice_close) >= self.threshold):
+            return "notice"
+        startup_error = self.screens.get("startup_error")
+        startup_error_button = self.targets.get("タイトルへ")
+        if (startup_error is not None and startup_error_button is not None
+                and self._score(image, startup_error, startup_error) >= self.threshold
+                and self._score(image, startup_error_button, startup_error_button) >= self.threshold):
+            return "startup_error"
+        if self._is_startup_splash(image):
+            return "startup_splash"
+        network_loading = self.screens.get("network_loading")
+        if (network_loading is not None
+                and self._score(image, network_loading, network_loading)
+                >= self._SCREEN_THRESHOLDS["network_loading"]):
+            return "network_loading"
+
         # Conflict warning is a safety-critical override: it must win over
         # the visually similar base EX-equipment screen.
         # 画面固有ボタンの存在は、動的なキャラクター画像より強い識別子。
@@ -96,16 +170,20 @@ class AdbTemplateScreenProbe:
         boss_detail = self.screens.get("boss_detail")
         if boss_detail is not None and self._score(image, boss_detail, boss_detail) >= self.threshold:
             return "boss_detail"
+        if self._matches_shifted_guild_select_header(image):
+            return "guild_select"
         # Screen templates are authoritative headers; check them before
         # dynamic button templates (a card can contain a visually identical
         # button ROI).
         for screen_id, reference in self.screens.items():
-            if screen_id in {"boss_detail"}:
+            if screen_id in {"boss_detail", "startup_error"}:
                 continue
-            if self._score(image, reference, reference) >= self.threshold:
+            threshold = self._SCREEN_THRESHOLDS.get(screen_id, self.threshold)
+            if self._score(image, reference, reference) >= threshold:
                 return screen_id
         for screen_id, label in (("guild_select", "フォレスティエ"), ("quest_menu", "ラビリンス"),
                                  ("labyrinth_top", "挑戦中"), ("labyrinth_top", "出発"),
+                                 ("home", "クエスト"),
                                  ("boss_map", "左BOSS"), ("boss_map", "右BOSS"),
                                  # 報酬ダイアログは古い全画面テンプレートと
                                  # 撤退確認背景が似るため、固有の閉じるボタンを
@@ -126,7 +204,8 @@ class AdbTemplateScreenProbe:
             region = self.targets.get(label)
             if region is not None and self._score(image, region, region) >= self.threshold:
                 return screen_id
-        scores = {name: self._score(image, ref, ref) for name, ref in self.screens.items()}
+        scores = {name: self._score(image, ref, ref) for name, ref in self.screens.items()
+                  if name != "startup_error"}
         name, score = max(scores.items(), key=lambda item: item[1])
         return name if score >= self.threshold else None
 
@@ -167,11 +246,12 @@ class AdbTemplateScreenProbe:
         region = self.targets.get(label)
         if region is None:
             return False
-        image = self._last_image if self._last_image is not None else self._capture()
+        image = self._last_color_image if self._last_color_image is not None else self._capture()
         screen = self._classify(image)
         if screen is None or label not in self._SCREEN_TARGETS.get(screen, set()):
             return False
-        return self._score(image, region, region) >= self.threshold
+        threshold = self._TARGET_THRESHOLDS.get(label, self.threshold)
+        return self._score(image, region, region) >= threshold
 
 
 def load_template_probe_config(path: str | Path, capture):

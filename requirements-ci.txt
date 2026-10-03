@@ -1,0 +1,4 @@
+# Install with: python -m pip install -r requirements-ci.txt -c constraints-ci.txt
+-r requirements.txt
+ruff
+coverage

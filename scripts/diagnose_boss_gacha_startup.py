@@ -8,12 +8,17 @@ import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct `python scripts/<task>.py` invocation.
+    from process_utils import run_without_console
+
 DEFAULT_LAUNCHER = Path(r"C:\Program Files\BlueStacks_nxt\HD-Player.exe")
 DEFAULT_PACKAGE = "jp.co.cygames.princessconnectredive"
 
 
 def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    return run_without_console(command, capture_output=True, text=True, timeout=10, check=False)
 
 
 def diagnose_startup(

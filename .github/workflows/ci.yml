@@ -21,17 +21,23 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-ci.txt
+            constraints-ci.txt
       - name: Install GUI test runtime
         run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt ruff
+        run: python -m pip install -r requirements-ci.txt -c constraints-ci.txt
       - name: Compile Python sources
-        run: python -m compileall -q scripts src
+        run: python -m compileall -q main.py scripts src tests
       - name: Run tests
         run: xvfb-run -a python -m pytest -q
       - name: Run static checks
-        run: python -m ruff check scripts src --select F,E9,F63,F7,F82,PLW1510
+        run: python -m ruff check main.py scripts src tests --select F,E9,F63,F7,F82,PLW1510
       - name: Validate screen catalog
         run: python scripts/validate_screen_catalog.py
       - name: Run safety audit
         run: python scripts/audit_safety.py
+      - name: Validate distribution archive
+        run: python scripts/build_distribution.py --check

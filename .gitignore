@@ -12,6 +12,7 @@ venv/
 env/
 .env
 .local_gui_settings.json
+.local_adb_runtime.json
 .env.*
 !.env.example
 
@@ -35,6 +36,16 @@ data/**/*.log
 artifacts/
 reports/
 distribution/_staging_*/
+# Old expanded distribution copies are local staging material. The ZIP builder
+# reads reviewed files from the repository root instead.
+/distribution/configs/
+/distribution/data/
+/distribution/docs/
+/distribution/scripts/
+/distribution/src/
+/distribution/main.py
+/distribution/requirements.txt
+/distribution/SECURITY.md
 cloud_status.json
 _tmp_*.py
 

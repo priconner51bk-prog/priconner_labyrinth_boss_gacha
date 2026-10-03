@@ -20,6 +20,8 @@ def build_resume_result(screen: str | None, challenge_active: bool = False) -> d
     # 推測して押さない。
     resume_map = {
         "title": "launch_labyrinth",
+        "network_loading": "wait_for_connection",
+        "home": "launch_labyrinth",
         # 起動タスクの正常な遷移先。ここで停止すると自走ループが
         # 起動直後に途切れるため、迷宮起動へ安全に戻す。
         "quest_menu": "launch_labyrinth",

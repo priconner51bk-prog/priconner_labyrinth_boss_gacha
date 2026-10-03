@@ -9,6 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct `python scripts/<task>.py` invocation.
+    from process_utils import run_without_console
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
@@ -29,7 +34,7 @@ def main() -> int:
     probe = load_template_probe_config(ROOT / "configs" / "live_screen_templates.json", capture)
     screen = probe.observe_screen()
     if screen is None:
-        detected = subprocess.run(
+        detected = run_without_console(
             [sys.executable, str(ROOT / "scripts" / "determine_current_state_live.py"), "--serial", args.serial],
             cwd=ROOT, capture_output=True, text=True, check=False,
         )
@@ -61,7 +66,7 @@ def main() -> int:
     # boss_map is already the post-gacha state; use the dedicated guarded
     # return flow because generic navigation has no safe boss_map tap target.
     if screen == "boss_map":
-        returned = subprocess.run(
+        returned = run_without_console(
             [sys.executable, str(ROOT / "scripts" / "task_return_initial_char_live.py"), "--serial", args.serial],
             cwd=ROOT, capture_output=True, text=True, check=False,
         )
@@ -79,7 +84,7 @@ def main() -> int:
         # guarded return already reached the active labyrinth entry screen.
         # Reconcile once with the shared checker before reporting failure.
         try:
-            checked = subprocess.run(
+            checked = run_without_console(
                 [sys.executable, str(ROOT / "scripts" / "task_check_current_screen_live.py"), "--serial", args.serial],
                 cwd=ROOT, capture_output=True, text=True, check=False, timeout=10,
             )

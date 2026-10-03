@@ -140,6 +140,8 @@ def test_title_is_tapped_once_without_relaunch(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["live", "--execute"])
     probe = Mock()
     probe.observe_screen.side_effect = ["title", "initial_char"]
+    probe.target_visible.return_value = True
+    probe.target_center.return_value = (640, 675)
     monkeypatch.setattr(cli, "load_template_probe_config", lambda *a: probe)
     monkeypatch.setattr(cli, "AdbScreenCapture", Mock())
     monkeypatch.setattr(cli, "ensure_adb_device", lambda serial: {"ok": True, "serial": serial})
@@ -154,6 +156,7 @@ def test_title_is_tapped_once_without_relaunch(monkeypatch, capsys):
     output = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert output[1]["status"] == "startup_transition"
     assert output[1]["title_tap_count"] == 1
+    assert output[1]["start_button_point"] == [640, 675]
 
 
 def test_startup_splash_waits_for_title_then_preflight_stops_without_input(monkeypatch, capsys):

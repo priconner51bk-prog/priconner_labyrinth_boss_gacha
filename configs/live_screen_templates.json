@@ -1,12 +1,33 @@
 {
   "threshold": 0.95,
   "screens": {
+    "home": {
+      "image": "data/observations/live/template_quest_nav_text.png",
+      "left": 665,
+      "top": 635,
+      "right": 780,
+      "bottom": 710
+    },
     "title": {
-      "image": "data/observations/live/template_title_start_text.png",
-      "left": 300,
-      "top": 570,
-      "right": 980,
-      "bottom": 720
+      "image": "data/observations/live/template_title_touch_compact.png",
+      "left": 534,
+      "top": 658,
+      "right": 674,
+      "bottom": 686
+    },
+    "startup_error": {
+      "image": "data/observations/live/template_startup_error_header.png",
+      "left": 580,
+      "top": 170,
+      "right": 700,
+      "bottom": 220
+    },
+    "network_loading": {
+      "image": "data/observations/live/template_connecting_text.png",
+      "left": 1010,
+      "top": 30,
+      "right": 1240,
+      "bottom": 60
     },
     "labyrinth_top": {
       "image": "data/observations/live/template_depart_button_text.png",
@@ -17,10 +38,10 @@
     },
     "quest_menu": {
       "image": "data/observations/live/template_quest_labyrinth_text.png",
-      "left": 1062,
-      "top": 563,
-      "right": 1247,
-      "bottom": 590
+      "left": 1085,
+      "top": 432,
+      "right": 1255,
+      "bottom": 470
     },
     "guild_select": {
       "image": "data/observations/live/template_guild_select_header_text_compact.png",
@@ -89,10 +110,17 @@
     },
     "ラビリンス": {
       "image": "data/observations/live/template_quest_labyrinth_text.png",
-      "left": 1062,
-      "top": 563,
-      "right": 1247,
-      "bottom": 590
+      "left": 1085,
+      "top": 432,
+      "right": 1255,
+      "bottom": 470
+    },
+    "クエスト": {
+      "image": "data/observations/live/template_quest_nav_text.png",
+      "left": 665,
+      "top": 635,
+      "right": 780,
+      "bottom": 710
     },
     "フォレスティエ": {
       "image": "data/template_migration/templates/guild_names/forestier.png",
@@ -205,6 +233,20 @@
       "top": 345,
       "right": 830,
       "bottom": 375
+    },
+    "Touch To Start": {
+      "image": "data/observations/live/template_title_touch_compact.png",
+      "left": 534,
+      "top": 658,
+      "right": 674,
+      "bottom": 686
+    },
+    "タイトルへ": {
+      "image": "data/observations/live/template_startup_error_title_button.png",
+      "left": 500,
+      "top": 460,
+      "right": 780,
+      "bottom": 530
     }
   }
 }

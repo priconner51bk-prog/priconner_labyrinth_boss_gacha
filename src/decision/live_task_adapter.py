@@ -1,4 +1,4 @@
-"""実機 task_ CLI の結果をオーケストレータのTaskResultへ変換する。"""
+"""実機 task_ CLI の実行結果を保持し、安全な判定へ変換する。"""
 
 from __future__ import annotations
 
@@ -8,12 +8,30 @@ import sys
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from .labyrinth_orchestrator import TaskResult, TaskStatus
-
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.process_utils import run_without_console
+
+
+class TaskStatus(str, Enum):
+    """Outcome of a parsed live task result."""
+
+    COMPLETED = "completed"
+    WAITING = "waiting"
+    STOPPED = "stopped"
+
+
+@dataclass(frozen=True)
+class TaskResult:
+    status: TaskStatus
+    facts: Mapping[str, Any]
+    reason: str = ""
+
 
 # task_*_live.py が操作完了として返す共通ステータス。ここにない値は、
 # AIが意味を推測して次の入力を送らないよう WAITING のままにする。
@@ -105,7 +123,7 @@ def execute_live_script(
     command = (sys.executable, str(script), *(args or []))
     started = time.perf_counter()
     try:
-        completed = subprocess.run(
+        completed = run_without_console(
             command,
             cwd=str(ROOT),
             capture_output=True,
@@ -142,6 +160,8 @@ def run_live_script(script_name: str, args: list[str] | None = None, *, timeout_
     run = execute_live_script(script_name, args, timeout_seconds=timeout_seconds)
     if run.error is not None:
         raise RuntimeError(run.error)
+    if run.returncode != 0:
+        raise RuntimeError(f"live_script_exit_nonzero:{script_name}:{run.returncode}")
     if run.result is None:  # Defensive guard for future changes to execute_live_script.
         raise RuntimeError(f"live_script_no_json:{script_name}:{run.returncode}")
     return run.result

@@ -8,6 +8,11 @@ import re
 import subprocess
 from pathlib import Path
 
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct `python scripts/<task>.py` invocation.
+    from process_utils import run_without_console
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -20,11 +25,11 @@ def main() -> int:
     checks: list[dict[str, object]] = result["checks"]  # type: ignore[assignment]
 
     try:
-        version = subprocess.run([args.adb, "version"], check=True, capture_output=True, text=True)
+        version = run_without_console([args.adb, "version"], check=True, capture_output=True, text=True)
         checks.append({"name": "adb", "ok": True, "detail": version.stdout.splitlines()[0] if version.stdout else "available"})
-        state = subprocess.run([args.adb, "-s", args.serial, "get-state"], check=True, capture_output=True, text=True)
+        state = run_without_console([args.adb, "-s", args.serial, "get-state"], check=True, capture_output=True, text=True)
         checks.append({"name": "device", "ok": state.stdout.strip() == "device", "detail": state.stdout.strip()})
-        size = subprocess.run([args.adb, "-s", args.serial, "shell", "wm", "size"], check=True, capture_output=True, text=True)
+        size = run_without_console([args.adb, "-s", args.serial, "shell", "wm", "size"], check=True, capture_output=True, text=True)
         matches = re.findall(r"(\d+)x(\d+)", size.stdout)
         actual = f"{matches[-1][0]}x{matches[-1][1]}" if matches else "unknown"
         checks.append({"name": "screen_size", "ok": actual == "1280x720", "detail": actual, "expected": "1280x720"})

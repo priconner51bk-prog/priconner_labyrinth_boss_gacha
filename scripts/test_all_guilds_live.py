@@ -3,16 +3,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct `python scripts/<task>.py` invocation.
+    from process_utils import run_without_console
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(command: list[str], serial: str) -> tuple[int, dict]:
-    result = subprocess.run(
+    result = run_without_console(
         [sys.executable, *command, "--serial", serial],
         cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
     )
@@ -50,7 +54,7 @@ def main() -> int:
         row["status"] = "passed"
         results.append(row)
         if index + 1 < len(guilds):
-            swipe = subprocess.run(
+            swipe = run_without_console(
                 ["adb", "-s", args.serial, "shell", "input", "swipe", "1100", "400", "250", "400", "500"],
                 cwd=ROOT, capture_output=True, text=True, check=False,
             )
@@ -62,7 +66,7 @@ def main() -> int:
             stable = False
             for _ in range(10):
                 time.sleep(0.5)
-                check = subprocess.run(
+                check = run_without_console(
                     [sys.executable, "scripts/task_check_current_screen_live.py", "--serial", args.serial],
                     cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
                 )

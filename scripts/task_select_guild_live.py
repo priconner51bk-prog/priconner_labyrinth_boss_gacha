@@ -4,11 +4,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import cv2
+
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct `python scripts/<task>.py` invocation.
+    from process_utils import run_without_console
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"src")); sys.path.insert(0,str(ROOT))
@@ -47,7 +51,7 @@ def _card_center(image, template_path: Path) -> tuple[int, int] | None:
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--serial",default="127.0.0.1:5555"); p.add_argument("--guild",default="美食殿"); a=p.parse_args(); cap=AdbScreenCapture(serial=a.serial)
-    checked = subprocess.run([sys.executable, str(ROOT / "scripts" / "task_check_current_screen_live.py"), "--serial", a.serial], cwd=ROOT, capture_output=True, text=True, check=False, timeout=10)
+    checked = run_without_console([sys.executable, str(ROOT / "scripts" / "task_check_current_screen_live.py"), "--serial", a.serial], cwd=ROOT, capture_output=True, text=True, check=False, timeout=10)
     payload = json.loads(checked.stdout.strip().splitlines()[-1])
     if payload.get("status") != "ok" or payload.get("screen_id") != "guild_select":
         print(json.dumps({"status":"safety_stop","reason":"guild_select_screen_not_confirmed","screen":payload.get("screen_id")},ensure_ascii=False)); return 2

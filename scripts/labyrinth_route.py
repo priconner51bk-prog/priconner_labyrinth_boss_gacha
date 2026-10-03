@@ -16,6 +16,11 @@ from typing import Protocol
 
 from decision.timing import AdaptiveWaitPolicy, wait_until_hidden, wait_until_visible
 
+try:
+    from scripts.process_utils import run_without_console
+except ModuleNotFoundError:  # Direct script invocation puts this directory on sys.path.
+    from process_utils import run_without_console
+
 # 画面プローブを持たない互換アダプター向けの最小間隔。
 # 実機ADBは画面変化検知が優先されるため、ここで2秒を固定しない。
 SCRIPT_BUTTON_INTERVAL_SECONDS = 0.30
@@ -26,6 +31,10 @@ MAP_SWIPE_START = (1120, 360)
 MAP_SWIPE_END = (160, 360)
 MAP_SWIPE_DURATION_MS = 300
 BASE_SCREEN_SIZE = (1280, 720)
+
+
+class SwipeOutcomeUnknownError(RuntimeError):
+    """The swipe may have reached Android, so another input is unsafe."""
 
 
 class AdbCoordinateScaler:
@@ -39,7 +48,7 @@ class AdbCoordinateScaler:
     def screen_size(self) -> tuple[int, int]:
         if self._size is not None:
             return self._size
-        result = subprocess.run(
+        result = run_without_console(
             [self.adb_command, "-s", self.serial, "shell", "wm", "size"],
             check=True, capture_output=True, text=True, timeout=ADB_HEALTHCHECK_TIMEOUT_SECONDS,
         )
@@ -204,26 +213,33 @@ def navigate_to_screen(
 def restart_adb_connection(
     *, serial: str = ADB_SERIAL, adb_command: str = "adb", timeout_seconds: float = ADB_HEALTHCHECK_TIMEOUT_SECONDS
 ) -> None:
-    """ADBサーバーを再起動し、対象BlueStacksへ再接続する共通復旧処理。"""
-    subprocess.run([adb_command, "kill-server"], check=False, capture_output=True, text=True, timeout=timeout_seconds)
-    subprocess.run([adb_command, "start-server"], check=True, capture_output=True, text=True, timeout=timeout_seconds)
-    subprocess.run([adb_command, "connect", serial], check=False, capture_output=True, text=True, timeout=timeout_seconds)
+    """Reconnect the target without restarting the host-global ADB server."""
+    if ":" in serial:
+        run_without_console(
+            [adb_command, "connect", serial], check=False, capture_output=True, text=True,
+            timeout=timeout_seconds,
+        )
+    run_without_console(
+        [adb_command, "-s", serial, "get-state"], check=True, capture_output=True, text=True,
+        timeout=timeout_seconds,
+    )
 
 
 def ensure_adb_connection(
     *, serial: str = ADB_SERIAL, adb_command: str = "adb", timeout_seconds: float = ADB_HEALTHCHECK_TIMEOUT_SECONDS
 ) -> None:
-    """タップ前のADB疎通確認。失敗時は1回だけ再起動・再接続して再確認する。"""
+    """タップ前のADB疎通確認。失敗時はサーバーを再起動せず3回で停止する。"""
     command = [adb_command, "-s", serial, "get-state"]
-    try:
-        subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
-        return
-    except (OSError, subprocess.SubprocessError):
+    last_error = None
+    for attempt in range(3):
         try:
-            restart_adb_connection(serial=serial, adb_command=adb_command, timeout_seconds=timeout_seconds)
-            subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
-        except (OSError, subprocess.SubprocessError) as second_error:
-            raise RuntimeError(f"ADB接続を復旧できません: {serial}") from second_error
+            run_without_console(command, check=True, capture_output=True, text=True, timeout=timeout_seconds)
+            return
+        except (OSError, subprocess.SubprocessError) as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(1)
+    raise RuntimeError(f"ADB接続を確認できません（3回失敗）: {serial}") from last_error
 
 
 def run_adb_coordinate_sequence(
@@ -277,7 +293,7 @@ def run_adb_coordinate_sequence(
         if timing_trace is not None and screen_probe is not None:
             timing_trace.record("screen_probe_before", 0.0, token=previous_token)
         started = time.monotonic()
-        subprocess.run(
+        run_without_console(
             [adb_command, "-s", serial, "shell", "input", "tap", str(x), str(y)],
             check=True,
             capture_output=True,
@@ -334,14 +350,19 @@ def run_adb_swipe(
         str(actual_start[0]), str(actual_start[1]), str(actual_end[0]),
         str(actual_end[1]), str(duration_ms),
     ]
-    for attempt in range(3):
+    try:
+        run_without_console(command, check=True, capture_output=True, text=True)
+    except Exception as exc:
+        # ADB can report an error after Android has already received input.
+        # Observe once more for diagnostics, but never infer that a resend is safe.
         try:
-            subprocess.run(command, check=True, capture_output=True, text=True)
-            break
-        except subprocess.CalledProcessError:
-            if attempt == 2:
-                raise
-            time.sleep(0.1 * (attempt + 1))
+            screen_confirmed = bool(screen_guard())
+            observation = "想定画面を再観測" if screen_confirmed else "想定画面を再観測できません"
+        except Exception as observation_error:
+            observation = f"画面再観測失敗: {type(observation_error).__name__}"
+        raise SwipeOutcomeUnknownError(
+            f"安全停止: ADBスワイプ送信結果不明（{observation}）。再送しません"
+        ) from exc
     if timing_trace is not None:
         timing_trace.record("adb_swipe_total", (time.monotonic() - started) * 1000,
                             start=list(actual_start), end=list(actual_end),

@@ -1,31 +1,31 @@
-# 認証前公開チェックリスト
+# 公開・更新前チェックリスト
 
-H2cの実行前にCloudで確認できる項目だけを定義する。認証、remote変更、pushは行わない。
+公開済みリポジトリを更新する前に確認する項目。2026-09-14 の実測は履歴として下に残す。
 
-- [x] 最終公開URLが確定している（`origin`: `https://github.com/priconner51bk-prog/priconner_labyrinth_boss_gacha`）
+- [x] 最終公開URLが確定している（`origin`: `git@github-priconner51bk-prog:priconner51bk-prog/priconner_labyrinth_boss_gacha.git`）
 - [x] 公開対象と除外対象が `docs/PUBLISHING.md` と一致している
 - [x] 実機キャプチャ、OCR結果、操作ログ、モデル、ローカル設定が公開対象外である
 - [x] 履歴方針がユーザー承認済みである
-- [x] pushの明示承認がある
+- [x] 2026-10-03: 今回の変更のテスト、配布ZIP検査、公開範囲を確認した
 
 ## 2026-09-14 実測根拠
 
 - 公開先: `origin` は GitHub リポジトリを指す（`git remote -v`）。
 - 著者情報・履歴方針: ユーザー指定のメールアドレスと「リリース確定時に新しい初回コミット」方針を確認済み。
-- 配布対象: `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260914_v9.zip` を作成し、126エントリ、禁止対象0件を確認済み。画面カタログ検証・安全監査も実施済み。
+- 当時の配布対象: `distribution/priconner_labyrinth_boss_gacha_gacha_minimal_20260914_v9.zip` を作成し、126エントリ、禁止対象0件を確認済み。画面カタログ検証・安全監査も実施済み。現在の配布ZIPは `distribution/priconner_labyrinth_boss_gacha.zip`。
 - 除外対象: 実機証跡、OCR結果、ログ、モデル、ローカル設定を配布ZIPに含めていないことを確認済み。
 - R-11証跡: ローカルの `data/observations/live/task_*_verified.png` と対応JSONLを確認済み。公開対象には含めていない。
 - push承認: 本リポジトリへの変更をGitHubへpush済み。
 
-未実施の認証操作・リリース公開操作は、このチェックリストの実測根拠には含めない。
+今回の変更に対する push やリリース公開は、この履歴の実測根拠には含めない。
 
 ## 履歴方針
 
-リリース確定時に、既存のコミット履歴を新しい初回コミットへまとめて公開する。
+2026-09-14 時点の方針は、公開時に既存の履歴を新しい初回コミットへまとめることだった。公開済みの現行リポジトリを更新する際に履歴を作り直さない。
 
 ## 再開条件
 
-公開入力値、認証環境、pushの明示承認が揃った時点でH2cを再開する。
+今回の変更の検証、公開対象の確認、更新時の認証環境が揃った時点で更新する。
 
 ## 安全停止
 

@@ -7,11 +7,12 @@
 - `configs/labyrinth_target_policy.json`: 対象ボスの既定値
 - `configs/labyrinth_guild_starting_members.json`: ギルドと初期メンバー
 - `configs/live_screen_templates.json`: 画面テンプレートと認識領域
-- `configs/runtime_settings.json`: ADB serialなどの共通設定
+
+`configs/runtime_settings.json` は現行の実行経路から読まれない旧設定です。配布ZIPには含めません。ADB serialはGUI入力またはCLIの `--serial` で指定します。GUIに保存された接続先とADB実行ファイルはローカル専用設定から準備処理と後続CLIへ引き継がれ、Git・配布ZIPには含めません。
 
 主な検証対象はエリア3・5、難易度10です。対象ボスはCLI引数で明示でき、候補名は設定ファイルの表記をそのまま使用します。対応外のエリア、難易度、画面レイアウトは未検証です。
 
-設定変更後はJSON構文、preflight、最大試行回数を小さくした実機確認の順に検証します。ADB serial、端末情報、個人環境のパス、実行キャプチャは設定ファイルへ保存・公開しないでください。
+設定変更後はJSON構文、preflight、最大試行回数を小さくした実機確認の順に検証します。ADB serial、端末情報、個人環境のパス、実行キャプチャはGit・配布物へ含めないでください。
 
 ## 処理結果
 
