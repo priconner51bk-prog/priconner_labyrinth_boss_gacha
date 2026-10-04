@@ -140,6 +140,30 @@ class AdbTemplateScreenProbe:
             and abs(match_top - region.top) <= 10
         )
 
+    @staticmethod
+    def _has_server_error_dialog_layout(image) -> bool:
+        """Recognize the server-error variant with the same title-return button.
+
+        The game uses a different header string for server error 201 than for
+        the usual connection timeout.  Both dialogs have the same fixed blue
+        header, white message body, and title-return button.  Requiring all
+        three regions avoids treating an unrelated screen with a similar
+        button as a recoverable network error.
+        """
+        if image is None or getattr(image, "ndim", 0) != 3:
+            return False
+        height, width = image.shape[:2]
+        if width < 958 or height < 450:
+            return False
+        header = image[171:218, 325:958]
+        body = image[220:450, 325:958]
+        hsv = cv2.cvtColor(header, cv2.COLOR_BGR2HSV)
+        blue_ratio = float(
+            ((hsv[:, :, 0] > 90) & (hsv[:, :, 0] < 135) & (hsv[:, :, 1] > 80)).mean()
+        )
+        white_ratio = float((body.min(axis=2) > 210).mean())
+        return blue_ratio >= 0.50 and white_ratio >= 0.80
+
     def _classify(self, image) -> str | None:
         notice_title = self.targets.get("お知らせウィンドウタイトル")
         notice_close = self.targets.get("お知らせ閉じる")
@@ -149,10 +173,11 @@ class AdbTemplateScreenProbe:
             return "notice"
         startup_error = self.screens.get("startup_error")
         startup_error_button = self.targets.get("タイトルへ")
-        if (startup_error is not None and startup_error_button is not None
-                and self._score(image, startup_error, startup_error) >= self.threshold
-                and self._score(image, startup_error_button, startup_error_button) >= self.threshold):
-            return "startup_error"
+        if startup_error is not None and startup_error_button is not None:
+            button_confirmed = self._score(image, startup_error_button, startup_error_button) >= self.threshold
+            header_confirmed = self._score(image, startup_error, startup_error) >= self.threshold
+            if button_confirmed and (header_confirmed or self._has_server_error_dialog_layout(image)):
+                return "startup_error"
         if self._is_startup_splash(image):
             return "startup_splash"
         network_loading = self.screens.get("network_loading")

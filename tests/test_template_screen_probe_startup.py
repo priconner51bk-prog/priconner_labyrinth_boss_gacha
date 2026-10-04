@@ -30,6 +30,28 @@ def test_startup_error_requires_its_confirmed_title_button(monkeypatch):
     assert probe._classify(image) is None
 
 
+def test_server_error_201_uses_confirmed_dialog_layout_when_header_text_differs(monkeypatch):
+    title = TemplateRegion("title.png", 490, 645, 790, 705)
+    error = TemplateRegion("error.png", 580, 170, 700, 220)
+    title_button = TemplateRegion("title_button.png", 500, 460, 780, 530)
+    probe = AdbTemplateScreenProbe(
+        capture=object(), screens={"title": title, "startup_error": error},
+        targets={"タイトルへ": title_button}, threshold=0.95,
+    )
+    monkeypatch.setattr(
+        probe, "_score",
+        lambda _image, reference, _region: 1.0 if reference is title_button else 0.2,
+    )
+    image = np.zeros((720, 1280, 3), dtype=np.uint8)
+    image[171:218, 325:958] = (255, 150, 30)  # Blue dialog header in BGR.
+    image[220:450, 325:958] = (255, 255, 255)
+
+    assert probe._classify(image) == "startup_error"
+
+    image[171:218, 325:958] = (0, 0, 0)
+    assert probe._classify(image) is None
+
+
 def test_animated_title_uses_scoped_threshold_for_screen_and_start_button(monkeypatch):
     title = TemplateRegion("title.png", 534, 658, 674, 686)
     start_button = TemplateRegion("start.png", 534, 658, 674, 686)
